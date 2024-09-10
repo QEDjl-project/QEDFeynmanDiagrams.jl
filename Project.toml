@@ -1,0 +1,22 @@
+name = "QEDFeynmanDiagrams"
+uuid = "3232ad24-8ec1-4588-843e-e2ed2eae1ff3"
+authors = ["AntonReinhard <a.reinhard@hzdr.de>", "Uwe Hernandez Acosta <u.hernandez@hzdr.de>"]
+version = "0.1.0"
+
+[deps]
+Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+ComputableDAGs = "62933717-1c9d-4a3f-b06f-7ab7f17ca32d"
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+LRUCache = "8ac3fa9e-de4c-5943-b1dc-09c6b5f20637"
+Memoization = "6fafb56a-5788-4b4e-91ca-c0cea6611c73"
+QEDbase = "10e22c08-3ccb-4172-bfcf-7d7aa3d04d93"
+QEDcore = "35dc0263-cb5f-4c33-a114-1d7f54ab753e"
+QEDprocesses = "46de9c38-1bb3-4547-a1ec-da24d767fdad"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+
+[extras]
+SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["SafeTestsets", "Test"]
