@@ -64,7 +64,7 @@ end
 Representation of a virtual particle and the return type of the [`virtual_particles`](@ref) function.
 The type parameters are:
 - PROC: The process this particle is a process of.
-- PT: The particle type of this virtual particle, e.g. `Photon` or `Electron`.
+- PT: The particle type of this virtual particle, e.g. [`QEDcore.Photon`](@extref) or [`QEDcore.Electron`](@extref).
 - I: The number of incoming particles of the process, i.e. `I := length(incoming_paritcles(PROC()))`
 - O: The number of outgoing particles of the process, i.e. `O := length(outgoing_paritcles(PROC()))`
 """
@@ -88,7 +88,7 @@ end
 
 Interface function that must be implemented for an instance of [`AbstractTreeLevelFeynmanDiagram`](@ref).
 
-Return the specific `QEDbase.AbstractProcessDefinition` which the given diagram is for.
+Return the specific [`QEDbase.AbstractProcessDefinition`](@extref) which the given diagram is for.
 """
 function QEDbase.process(vp::VirtualParticle)
     return vp.proc
@@ -429,7 +429,7 @@ end
 """
     _pseudo_virtual_particles
 
-Return a vector of `VirtualParticle` for each external particle. These are not actually virtual particles, but can be helpful as entry points.
+Return a vector of [`VirtualParticle`](@ref) for each external particle. These are not actually virtual particles, but can be helpful as entry points.
 """
 function _pseudo_virtual_particles(proc::AbstractProcessDefinition)
     return sort(

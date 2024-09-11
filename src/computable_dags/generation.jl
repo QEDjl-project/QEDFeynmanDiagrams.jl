@@ -304,7 +304,7 @@ end
 """
     generate_DAG(proc::AbstractProcessDefinition)
 
-Generate and return a `DAG` from `ComputableDAGs`, representing the computation for the squared matrix element of this scattering process, summed over spin and polarization combinations allowed by the process.
+Generate and return a [`ComputableDAGs.DAG`](@extref), representing the computation for the squared matrix element of this scattering process, summed over spin and polarization combinations allowed by the process.
 """
 function generate_DAG(proc::AbstractProcessDefinition)
     particles = virtual_particles(proc)                  # virtual particles that will be input to propagator tasks

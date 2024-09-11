@@ -1,4 +1,8 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterInterLinks = "d12716ef-a0f6-4df4-a9f1-a5a34e75c656"
 DocumenterTools = "35a29f4d-8980-5a13-9543-d66fff28ecb8"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 QEDFeynmanDiagrams = "3232ad24-8ec1-4588-843e-e2ed2eae1ff3"
+QEDbase = "10e22c08-3ccb-4172-bfcf-7d7aa3d04d93"
+QEDprocesses = "46de9c38-1bb3-4547-a1ec-da24d767fdad"
