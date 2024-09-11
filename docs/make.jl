@@ -12,6 +12,7 @@ links = InterLinks(
     "ComputableDAGs" => "https://computabledags.github.io/ComputableDAGs.jl/dev/",
     "QEDbase" => "https://qedjl-project.github.io/QEDbase.jl/dev/",
     "QEDcore" => "https://qedjl-project.github.io/QEDcore.jl/dev/",
+    "QuantumElectrodynamics" => "https://qedjl-project.github.io/QuantumElectrodynamics.jl/dev/",
 )
 
 # setup examples using Literate.jl
