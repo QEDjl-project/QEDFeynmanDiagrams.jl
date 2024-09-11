@@ -46,7 +46,7 @@ makedocs(;
     modules=[QEDFeynmanDiagrams],
     checkdocs=:exports,
     authors="Anton Reinhard",
-    repo=Documenter.Remotes.GitHub("QEDFeynmanDiagrams", "QEDFeynmanDiagrams.jl"),
+    repo=Documenter.Remotes.GitHub("QEDjl-project", "QEDFeynmanDiagrams.jl"),
     sitename="QEDFeynmanDiagrams.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
