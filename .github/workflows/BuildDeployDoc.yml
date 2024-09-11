@@ -18,9 +18,11 @@ jobs:
       - uses: julia-actions/setup-julia@v1
         with:
           version: "1.10"
-      - name: Install dependencies
+      - name: Install dependencies # TODO: currently needs dev versions of QEDbase and QEDprocesses, remove once they are released again
         run: |
           julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+          julia --project=docs/ -e 'using Pkg; Pkg.add(url="https://github.com/QEDjl-project/QEDbase.jl/")'
+          julia --project=docs/ -e 'using Pkg; Pkg.add(url="https://github.com/QEDjl-project/QEDprocesses.jl/")'
       - name: Build and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # If authenticating with GitHub Actions token
