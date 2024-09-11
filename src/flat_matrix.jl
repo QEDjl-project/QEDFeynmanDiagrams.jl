@@ -23,7 +23,7 @@ function Base.getindex(m::FlatMatrix{T,N,M}, x::Int, y::Int) where {T,N,M}
         m.indices[x] + y <= N
     else
         m.indices[x] + y <= m.indices[x + 1] ||
-        throw(InvalidInputError("invalid indices ($x, $y) for flat matrix $m"))
+            throw(InvalidInputError("invalid indices ($x, $y) for flat matrix $m"))
     end
     return m.values[m.indices[x] + y]
 end
