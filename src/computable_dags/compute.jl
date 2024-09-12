@@ -84,7 +84,10 @@ function compute( #=@inline=#
     end
 
     vp_species = particle_species(input.vp)
-    return QEDbase.propagator(vp_species, vp_mom)
+    #println("$vp_species with $vp_mom")
+    inner = QEDbase.propagator(vp_species, vp_mom)
+    println("inner: $(inner[1, 1])")
+    return inner
     # diracmatrix or scalar number
 end
 
@@ -182,8 +185,14 @@ end
 
 # this compiles in a reasonable amount of time for up to about 1e4 parameters
 # use a summation algorithm with more accuracy and/or parallelization
-compute(::ComputeTask_CollectPairs, args::Vararg{N,T}) where {N,T} = sum(args) #=@inline=#
-compute(::ComputeTask_CollectTriples, args::Vararg{N,T}) where {N,T} = sum(args) #=@inline=#
+function compute(::ComputeTask_CollectPairs, args::Vararg{N,T}) where {N,T}
+    println("summing $args")
+    return sum(args)
+end
+function compute(::ComputeTask_CollectTriples, args::Vararg{N,T}) where {N,T}
+    println("summing $args")
+    return sum(args)
+end
 function compute(::ComputeTask_SpinPolCumulation, args::Vararg{N,T}) where {N,T} #=@inline=#
     sum = 0.0
     for arg in args
