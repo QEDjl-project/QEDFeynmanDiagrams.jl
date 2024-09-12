@@ -14,6 +14,9 @@ QEDcore = "35dc0263-cb5f-4c33-a114-1d7f54ab753e"
 QEDprocesses = "46de9c38-1bb3-4547-a1ec-da24d767fdad"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 
+[compat]
+Reexport = "1"
+
 [extras]
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
