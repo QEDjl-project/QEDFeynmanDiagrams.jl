@@ -321,10 +321,15 @@ function generate_DAG(proc::AbstractProcessDefinition)
 
     # TODO: use the spin/pol iterator here once it has been implemented
     # -- Base State Tasks --
-    base_state_task_outputs = Dict()
+    propagated_outputs = Dict{VirtualParticle,Vector{Node}}()
     for dir in (Incoming(), Outgoing())
         for species in (Electron(), Positron(), Photon())
             for index in 1:number_particles(proc, dir, species)
+                p = VirtualParticle(
+                    proc,
+                    is_outgoing(dir) ? _invert(species) : species,
+                    _momentum_contribution(proc, dir, species, index)...,
+                )
                 for spin_pol in _spin_pols(spin_or_pol(proc, dir, species, index))
                     # gen entry nodes
                     # names are "bs_<dir>_<species>_<spin/pol>_<index>"
@@ -344,7 +349,10 @@ function generate_DAG(proc::AbstractProcessDefinition)
                     insert_edge!(graph, data_in, compute_base_state)
                     insert_edge!(graph, compute_base_state, data_out)
 
-                    base_state_task_outputs[data_node_name] = data_out
+                    if !haskey(propagated_outputs, p)
+                        propagated_outputs[p] = Vector{Node}()
+                    end
+                    push!(propagated_outputs[p], data_out)
                 end
             end
         end
@@ -369,9 +377,8 @@ function generate_DAG(proc::AbstractProcessDefinition)
     end
 
     # -- Pair Tasks --
-    pair_task_outputs = Dict{VirtualParticle,Vector{Node}}()
     for (product_particle, input_particle_vector) in pairs
-        pair_task_outputs[product_particle] = Vector{Node}()
+        propagated_outputs[product_particle] = Vector{Node}()
 
         # make a dictionary of vectors to collect the outputs depending on spin/pol configs of the input particles
         N = _number_contributions(product_particle)
@@ -381,21 +388,10 @@ function generate_DAG(proc::AbstractProcessDefinition)
 
         for input_particles in input_particle_vector
             # input_particles is a tuple of first and second particle
-            particles_data_out_nodes = (Vector(), Vector())
-            c = 0
-            for p in input_particles
-                c += 1
-                if (is_external(p))
-                    # grab from base_states (broadcast over _base_state_name because it is a tuple for different spin_pols)
-                    push!.(
-                        Ref(particles_data_out_nodes[c]),
-                        getindex.(Ref(base_state_task_outputs), _base_state_name(p)),
-                    )
-                else
-                    # grab from propagated particles
-                    append!(particles_data_out_nodes[c], pair_task_outputs[p])
-                end
-            end
+            particles_data_out_nodes = (
+                propagated_outputs[input_particles[1]],
+                propagated_outputs[input_particles[2]],
+            )
 
             for in_nodes in Iterators.product(particles_data_out_nodes...)
                 # make the compute pair nodes for every combination of the found input_particle_nodes to get all spin/pol combinations
@@ -450,28 +446,17 @@ function generate_DAG(proc::AbstractProcessDefinition)
 
             insert_edge!(graph, compute_propagated, data_out_propagated)
 
-            push!(pair_task_outputs[product_particle], data_out_propagated)
+            push!(propagated_outputs[product_particle], data_out_propagated)
         end
     end
 
     # -- Triples --
     triples_results = Dict()
     for (ph, el, po) in triples    # for each triple (each "diagram")
-        photons = if is_external(ph)
-            getindex.(Ref(base_state_task_outputs), _base_state_name(ph))
-        else
-            pair_task_outputs[ph]
-        end
-        electrons = if is_external(el)
-            getindex.(Ref(base_state_task_outputs), _base_state_name(el))
-        else
-            pair_task_outputs[el]
-        end
-        positrons = if is_external(po)
-            getindex.(Ref(base_state_task_outputs), _base_state_name(po))
-        else
-            pair_task_outputs[po]
-        end
+        photons = propagated_outputs[ph]
+        electrons = propagated_outputs[el]
+        positrons = propagated_outputs[po]
+
         for (a, b, c) in Iterators.product(photons, electrons, positrons) # for each spin/pol config of each part
             compute_triples = insert_node!(graph, ComputeTask_Triple())
             data_triples = insert_node!(graph, DataTask(0))
