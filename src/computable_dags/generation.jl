@@ -301,6 +301,12 @@ function _make_node_name(spin_pols::Vector)
     return node_name
 end
 
+# return an index for the argument ordering on edges in the DAG for a given particle species, photon -> 1, electron -> 2, positron -> 3
+_edge_index_from_species(::Photon) = 1
+_edge_index_from_species(::Electron) = 2
+_edge_index_from_species(::Positron) = 3
+_edge_index_from_vp(vp::VirtualParticle) = _edge_index_from_species(particle_species(vp))
+
 """
     generate_DAG(proc::AbstractProcessDefinition)
 
@@ -374,6 +380,7 @@ function generate_DAG(proc::AbstractProcessDefinition)
         }()
 
         for input_particles in input_particle_vector
+            # input_particles is a tuple of first and second particle
             particles_data_out_nodes = (Vector(), Vector())
             c = 0
             for p in input_particles
@@ -395,8 +402,18 @@ function generate_DAG(proc::AbstractProcessDefinition)
                 compute_pair = insert_node!(graph, ComputeTask_Pair())
                 pair_data_out = insert_node!(graph, DataTask(0))
 
-                insert_edge!(graph, in_nodes[1], compute_pair)
-                insert_edge!(graph, in_nodes[2], compute_pair)
+                insert_edge!(
+                    graph,
+                    in_nodes[1],
+                    compute_pair,
+                    _edge_index_from_vp(input_particles[1]),
+                )
+                insert_edge!(
+                    graph,
+                    in_nodes[2],
+                    compute_pair,
+                    _edge_index_from_vp(input_particles[2]),
+                )
                 insert_edge!(graph, compute_pair, pair_data_out)
 
                 # get the spin/pol config of the input particles from the data_out names
@@ -427,8 +444,10 @@ function generate_DAG(proc::AbstractProcessDefinition)
             end
 
             insert_edge!(graph, compute_pairs_sum, data_pairs_sum)
-            insert_edge!(graph, propagator_node, compute_propagated)
-            insert_edge!(graph, data_pairs_sum, compute_propagated)
+
+            insert_edge!(graph, propagator_node, compute_propagated, 1)
+            insert_edge!(graph, data_pairs_sum, compute_propagated, 2)
+
             insert_edge!(graph, compute_propagated, data_out_propagated)
 
             push!(pair_task_outputs[product_particle], data_out_propagated)
@@ -457,9 +476,9 @@ function generate_DAG(proc::AbstractProcessDefinition)
             compute_triples = insert_node!(graph, ComputeTask_Triple())
             data_triples = insert_node!(graph, DataTask(0))
 
-            insert_edge!(graph, a, compute_triples)
-            insert_edge!(graph, b, compute_triples)
-            insert_edge!(graph, c, compute_triples)
+            insert_edge!(graph, a, compute_triples, 1) # first argument photons
+            insert_edge!(graph, b, compute_triples, 2) # second argument electrons
+            insert_edge!(graph, c, compute_triples, 3) # third argument positrons
 
             insert_edge!(graph, compute_triples, data_triples)
 

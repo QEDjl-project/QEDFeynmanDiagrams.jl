@@ -42,22 +42,22 @@ struct BaseStateInput{PS_T<:AbstractParticleStateful,SPIN_POL_T<:AbstractSpinOrP
     spin_pol::SPIN_POL_T
 end
 
-function compute( #=@inline=#
-    ::ComputeTask_BaseState,
-    input::BaseStateInput{PS,SPIN_POL},
+function compute(
+    ::ComputeTask_BaseState, input::BaseStateInput{PS,SPIN_POL}
 ) where {PS,SPIN_POL}
     species = particle_species(input.particle)
     if is_outgoing(input.particle)
         species = _invert(species)
     end
+    state = QEDbase.base_state(
+        particle_species(input.particle),
+        particle_direction(input.particle),
+        momentum(input.particle),
+        input.spin_pol,
+    )
     return Propagated( # "propagated" because it goes directly into the next pair
         species,
-        QEDbase.base_state(
-            particle_species(input.particle),
-            particle_direction(input.particle),
-            momentum(input.particle),
-            input.spin_pol,
-        ),
+        state,
         # bispinor, adjointbispinor, or lorentzvector
     )
 end
@@ -67,28 +67,35 @@ struct PropagatorInput{VP_T<:VirtualParticle,PSP_T<:AbstractPhaseSpacePoint}
     psp::Ref{PSP_T}
 end
 
-function compute( #=@inline=#
-    ::ComputeTask_Propagator,
-    input::PropagatorInput{VP_T,PSP_T},
-) where {VP_T,PSP_T}
-    vp_mom = zero(typeof(momentum(input.psp[], Incoming(), 1)))
-    for i in eachindex(_in_contributions(input.vp))
-        if _in_contributions(input.vp)[i]
-            vp_mom += momentum(input.psp[], Incoming(), i)
-        end
+@inline _masked_sum(::Tuple{}, ::Tuple{}) = error("masked sum needs at least one argument")
+@inline function _masked_sum(values::Tuple{T}, mask::Tuple{Bool}) where {T}
+    return mask[1] ? values[1] : zero(T)
+end
+@inline function _masked_sum(
+    values::Tuple{T,Vararg{T,N}}, mask::Tuple{Bool,Vararg{Bool,N}}
+) where {N,T}
+    return if mask[1]
+        values[1] + _masked_sum(values[2:end], mask[2:end])
+    else
+        _masked_sum(values[2:end], mask[2:end])
     end
-    for o in eachindex(_out_contributions(input.vp))
-        if (_out_contributions(input.vp))[o]
-            vp_mom -= momentum(input.psp[], Outgoing(), o)
-        end
-    end
+end
 
+function _vp_momentum(
+    vp::VirtualParticle{PROC,SPECIES,I,O}, psp::PhaseSpacePoint
+) where {PROC,SPECIES,I,O}
+    return _masked_sum(momenta(psp, Incoming()), _in_contributions(vp)) -
+           _masked_sum(momenta(psp, Outgoing()), _out_contributions(vp))
+end
+
+function compute(
+    ::ComputeTask_Propagator, input::PropagatorInput{VP_T,PSP_T}
+) where {VP_T,PSP_T}
+    # TODO: this is currently eating the most time of the computation, improve this
+    vp_mom = _vp_momentum(input.vp, input.psp[])
     vp_species = particle_species(input.vp)
-    #println("$vp_species with $vp_mom")
     inner = QEDbase.propagator(vp_species, vp_mom)
-    println("inner: $(inner[1, 1])")
     return inner
-    # diracmatrix or scalar number
 end
 
 struct Unpropagated{PARTICLE_T<:AbstractParticleType,VALUE_T}
@@ -96,7 +103,7 @@ struct Unpropagated{PARTICLE_T<:AbstractParticleType,VALUE_T}
     value::VALUE_T
 end
 
-function Base.:+(a::Unpropagated{P,V}, b::Unpropagated{P,V}) where {P,V}
+@inline function Base.:+(a::Unpropagated{P,V}, b::Unpropagated{P,V}) where {P,V}
     return Unpropagated(a.particle, a.value + b.value)
 end
 
@@ -105,95 +112,62 @@ struct Propagated{PARTICLE_T<:AbstractParticleType,VALUE_T}
     value::VALUE_T
 end
 
-# maybe add the γ matrix term here too?
-function compute( #=@inline=#
+@inline function compute( # photon, electron
+    ::ComputeTask_Pair,
+    photon::Propagated{Photon,V1},
+    electron::Propagated{Electron,V2},
+) where {V1,V2}
+    return Unpropagated(Electron(), photon.value * _vertex() * electron.value) # photon - electron -> electron
+end
+@inline function compute( # photon, positron
+    ::ComputeTask_Pair,
+    photon::Propagated{Photon,V1},
+    positron::Propagated{Positron,V2},
+) where {V1,V2}
+    return Unpropagated(Positron(), positron.value * _vertex() * photon.value) # photon - positron -> positron
+end
+@inline function compute( # electron, positron
     ::ComputeTask_Pair,
     electron::Propagated{Electron,V1},
     positron::Propagated{Positron,V2},
 ) where {V1,V2}
-    return Unpropagated(Photon(), positron.value * _vertex() * electron.value)  # fermion - antifermion -> photon
-end
-function compute( #=@inline=#
-    ::ComputeTask_Pair,
-    positron::Propagated{Positron,V1},
-    electron::Propagated{Electron,V2},
-) where {V1,V2}
-    return Unpropagated(Photon(), positron.value * _vertex() * electron.value)  # antifermion - fermion -> photon
-end
-function compute( #=@inline=#
-    ::ComputeTask_Pair,
-    photon::Propagated{Photon,V1},
-    fermion::Propagated{F,V2},
-) where {F<:FermionLike,V1,V2}
-    return Unpropagated(fermion.particle, photon.value * _vertex() * fermion.value) # (anti-)fermion - photon -> (anti-)fermion
-end
-function compute( #=@inline=#
-    ::ComputeTask_Pair,
-    fermion::Propagated{F,V2},
-    photon::Propagated{Photon,V1},
-) where {F<:FermionLike,V1,V2}
-    return Unpropagated(fermion.particle, photon.value * _vertex() * fermion.value) # photon - (anti-)fermion -> (anti-)fermion
+    return Unpropagated(Photon(), positron.value * _vertex() * electron.value)  # electron - positron -> photon
 end
 
-function compute( #=@inline=#
-    ::ComputeTask_PropagatePairs,
-    left::PROP_V,
-    right::Unpropagated{P,VAL},
-) where {PROP_V,P<:AbstractParticleType,VAL}
-    return Propagated(right.particle, left * right.value)
+@inline function compute(
+    ::ComputeTask_PropagatePairs, prop::PROP_V, photon::Unpropagated{Photon,VAL}
+) where {PROP_V,VAL}
+    return Propagated(Photon(), photon.value * prop)
 end
-function compute( #=@inline=#
-    ::ComputeTask_PropagatePairs,
-    left::Unpropagated{P,VAL},
-    right::PROP_V,
-) where {PROP_V,P<:AbstractParticleType,VAL}
-    return Propagated(left.particle, right * left.value)
+@inline function compute(
+    ::ComputeTask_PropagatePairs, prop::PROP_V, electron::Unpropagated{Electron,VAL}
+) where {PROP_V,VAL}
+    return Propagated(Electron(), prop * electron.value)
+end
+@inline function compute(
+    ::ComputeTask_PropagatePairs, prop::PROP_V, positron::Unpropagated{Positron,VAL}
+) where {PROP_V,VAL}
+    return Propagated(Positron(), positron.value * prop)
 end
 
-function compute( #=@inline=#
+@inline function compute(
     ::ComputeTask_Triple,
     photon::Propagated{Photon,V1},
     electron::Propagated{Electron,V2},
     positron::Propagated{Positron,V3},
 ) where {V1,V2,V3}
-    return positron.value * _vertex() * photon.value * electron.value
-end
-function compute( #=@inline=#
-    c::ComputeTask_Triple,
-    photon::Propagated{Photon,V1},
-    positron::Propagated{Positron,V2},
-    electron::Propagated{Electron,V3},
-) where {V1,V2,V3}
-    return compute(c, photon, electron, positron)
-end
-function compute( #=@inline=#
-    c::ComputeTask_Triple,
-    f1::Propagated{F1,V1},
-    f2::Propagated{F2,V2},
-    photon::Propagated{Photon,V3},
-) where {V1,V2,V3,F1<:FermionLike,F2<:FermionLike}
-    return compute(c, photon, f1, f2)
-end
-function compute( #=@inline=#
-    c::ComputeTask_Triple,
-    f1::Propagated{F1,V1},
-    photon::Propagated{Photon,V2},
-    f2::Propagated{F2,V3},
-) where {V1,V2,V3,F1<:FermionLike,F2<:FermionLike}
-    return compute(c, photon, f1, f2)
+    return positron.value * (_vertex() * photon.value) * electron.value
 end
 
 # this compiles in a reasonable amount of time for up to about 1e4 parameters
 # use a summation algorithm with more accuracy and/or parallelization
-function compute(::ComputeTask_CollectPairs, args::Vararg{N,T}) where {N,T}
-    println("summing $args")
+@inline function compute(::ComputeTask_CollectPairs, args::Vararg{N,T}) where {N,T}
     return sum(args)
 end
-function compute(::ComputeTask_CollectTriples, args::Vararg{N,T}) where {N,T}
-    println("summing $args")
+@inline function compute(::ComputeTask_CollectTriples, args::Vararg{N,T}) where {N,T}
     return sum(args)
 end
-function compute(::ComputeTask_SpinPolCumulation, args::Vararg{N,T}) where {N,T} #=@inline=#
+function compute(::ComputeTask_SpinPolCumulation, args::Vararg{N,T}) where {N,T}
     sum = 0.0
     for arg in args
         sum += abs2(arg)
