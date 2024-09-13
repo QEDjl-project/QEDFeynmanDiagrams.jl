@@ -17,7 +17,7 @@ end
 import ComputableDAGs: compute, compute_effort, children
 
 const e = sqrt(4π / 137)
-_vertex() = -1im * e * gamma()
+const VERTEX = -1im * e * gamma()
 
 compute_effort(::ComputeTask_BaseState) = 0
 compute_effort(::ComputeTask_Propagator) = 0
@@ -117,21 +117,21 @@ end
     photon::Propagated{Photon,V1},
     electron::Propagated{Electron,V2},
 ) where {V1,V2}
-    return Unpropagated(Electron(), photon.value * _vertex() * electron.value) # photon - electron -> electron
+    return Unpropagated(Electron(), photon.value * VERTEX * electron.value) # photon - electron -> electron
 end
 @inline function compute( # photon, positron
     ::ComputeTask_Pair,
     photon::Propagated{Photon,V1},
     positron::Propagated{Positron,V2},
 ) where {V1,V2}
-    return Unpropagated(Positron(), positron.value * _vertex() * photon.value) # photon - positron -> positron
+    return Unpropagated(Positron(), positron.value * VERTEX * photon.value) # photon - positron -> positron
 end
 @inline function compute( # electron, positron
     ::ComputeTask_Pair,
     electron::Propagated{Electron,V1},
     positron::Propagated{Positron,V2},
 ) where {V1,V2}
-    return Unpropagated(Photon(), positron.value * _vertex() * electron.value)  # electron - positron -> photon
+    return Unpropagated(Photon(), positron.value * VERTEX * electron.value)  # electron - positron -> photon
 end
 
 @inline function compute(
@@ -156,7 +156,7 @@ end
     electron::Propagated{Electron,V2},
     positron::Propagated{Positron,V3},
 ) where {V1,V2,V3}
-    return positron.value * (_vertex() * photon.value) * electron.value
+    return positron.value * (VERTEX * photon.value) * electron.value
 end
 
 # this compiles in a reasonable amount of time for up to about 1e4 parameters
