@@ -91,7 +91,6 @@ end
 function compute(
     ::ComputeTask_Propagator, input::PropagatorInput{VP_T,PSP_T}
 ) where {VP_T,PSP_T}
-    # TODO: this is currently eating the most time of the computation, improve this
     vp_mom = _vp_momentum(input.vp, input.psp[])
     vp_species = particle_species(input.vp)
     inner = QEDbase.propagator(vp_species, vp_mom)
