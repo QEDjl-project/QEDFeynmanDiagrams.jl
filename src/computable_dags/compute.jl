@@ -16,7 +16,7 @@ end
 # import so we don't have to repeat it all the time
 import ComputableDAGs: compute, compute_effort, children
 
-const e = sqrt(4π / 137)
+const e = sqrt(4π / 137.035999177)
 const VERTEX = -1im * e * gamma()
 
 compute_effort(::ComputeTask_BaseState) = 0

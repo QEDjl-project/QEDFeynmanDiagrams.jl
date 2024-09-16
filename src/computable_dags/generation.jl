@@ -163,10 +163,14 @@ end
 _dir_str(::Incoming) = "inc"
 _dir_str(::Outgoing) = "out"
 
+# the possible spins or pols for generating base state tasks
 _spin_pols(::AllSpin) = (SpinUp(), SpinDown())
+_spin_pols(::SyncedSpin) = (SpinUp(), SpinDown())
 _spin_pols(::SpinUp) = (SpinUp(),)
 _spin_pols(::SpinDown) = (SpinDown(),)
+
 _spin_pols(::AllPol) = (PolX(), PolY())
+_spin_pols(::SyncedPol) = (PolX(), PolY())
 _spin_pols(::PolX) = (PolX(),)
 _spin_pols(::PolY) = (PolY(),)
 
@@ -319,7 +323,6 @@ function generate_DAG(proc::AbstractProcessDefinition)
 
     graph = DAG()
 
-    # TODO: use the spin/pol iterator here once it has been implemented
     # -- Base State Tasks --
     propagated_outputs = Dict{VirtualParticle,Vector{Node}}()
     for dir in (Incoming(), Outgoing())
@@ -395,6 +398,8 @@ function generate_DAG(proc::AbstractProcessDefinition)
 
             for in_nodes in Iterators.product(particles_data_out_nodes...)
                 # make the compute pair nodes for every combination of the found input_particle_nodes to get all spin/pol combinations
+
+                # TODO check here whether the created pair will actually make a valid sub diagram, considering SyncedSpin/Pol
                 compute_pair = insert_node!(graph, ComputeTask_Pair())
                 pair_data_out = insert_node!(graph, DataTask(0))
 
