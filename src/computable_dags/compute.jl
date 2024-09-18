@@ -80,7 +80,7 @@ end
 end
 
 function _vp_momentum(
-    vp::VirtualParticle{PROC,SPECIES,I,O}, psp::PhaseSpacePoint
+    vp::VirtualParticle{PROC,SPECIES,I,O}, psp::AbstractPhaseSpacePoint
 ) where {PROC,SPECIES,I,O}
     return _masked_sum(momenta(psp, Incoming()), _in_contributions(vp)) -
            _masked_sum(momenta(psp, Outgoing()), _out_contributions(vp))

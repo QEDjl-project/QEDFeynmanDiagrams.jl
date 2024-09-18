@@ -122,6 +122,8 @@ function ComputableDAGs.input_expr(
 end
 
 function ComputableDAGs.input_type(p::AbstractProcessDefinition)
+    # TODO correctly assemble abstract types here
+    # See https://github.com/QEDjl-project/QEDFeynmanDiagrams.jl/issues/29
     return Any
     in_t = QEDcore._assemble_tuple_type(incoming_particles(p), Incoming(), SFourMomentum)
     out_t = QEDcore._assemble_tuple_type(outgoing_particles(p), Outgoing(), SFourMomentum)
@@ -312,6 +314,58 @@ _edge_index_from_species(::Positron) = 3
 _edge_index_from_vp(vp::VirtualParticle) = _edge_index_from_species(particle_species(vp))
 
 """
+    _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tuple)
+
+Internal function for DAG generation. Checks for a given process and a spin/pol combination whether the spin/pol combination is
+part of the process, including checking for [`QEDbase.SyncedPol`](@extref) and [`QEDbase.SyncedSpin`](@extref).
+"""
+function _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tuple)
+    proc_spin_pols = (incoming_spin_pols(proc)..., outgoing_spin_pols(proc)...)
+
+    # for synced spins/pols, remember the first occurrence and its definite spin/pol, then check that later ones are the same
+    synced_pols = Dict{SyncedPol,AbstractDefinitePolarization}()
+    synced_spins = Dict{SyncedSpin,AbstractDefiniteSpin}()
+
+    for (i, sp) in index
+        if proc_spin_pols[i] isa AllSpin || proc_spin_pols[i] isa AllPol
+            # for allspin and allpol, everything is allowed
+            continue
+        end
+        if proc_spin_pols[i] == sp
+            # sp is always definite, so if they're equal the combination is always allowed
+            continue
+        end
+        if proc_spin_pols[i] isa SyncedSpin
+            if !haskey(synced_spins, proc_spin_pols[i]) # insert first occurrence
+                synced_spins[proc_spin_pols[i]] = sp
+                continue
+            end
+            if synced_spins[proc_spin_pols[i]] == sp # otherwise, check if sp is synced
+                continue
+            end
+            # the spin is not synced
+            return false
+        end
+
+        if proc_spin_pols[i] isa SyncedPol
+            if !haskey(synced_pols, proc_spin_pols[i])
+                synced_pols[proc_spin_pols[i]] = sp
+                continue
+            end
+            if synced_pols[proc_spin_pols[i]] == sp
+                continue
+            end
+            # the pol is not synced
+            return false
+        end
+
+        error("encountered unknown spin or polarization type")
+    end
+
+    return true
+end
+
+"""
     generate_DAG(proc::AbstractProcessDefinition)
 
 Generate and return a [`ComputableDAGs.DAG`](@extref), representing the computation for the squared matrix element of this scattering process, summed over spin and polarization combinations allowed by the process.
@@ -397,9 +451,16 @@ function generate_DAG(proc::AbstractProcessDefinition)
             )
 
             for in_nodes in Iterators.product(particles_data_out_nodes...)
+                # get the spin/pol config of the input particles from the data_out names
+                index = _parse_node_names(in_nodes[1].name, in_nodes[2].name)
+                # index is a tuple of tuples, containing the particle index and their definite spin/pol
+                if !_is_index_valid_combination(proc, index)
+                    # skip this pair creation if the spin/pol combination doesn't exist
+                    continue
+                end
+
                 # make the compute pair nodes for every combination of the found input_particle_nodes to get all spin/pol combinations
 
-                # TODO check here whether the created pair will actually make a valid sub diagram, considering SyncedSpin/Pol
                 compute_pair = insert_node!(graph, ComputeTask_Pair())
                 pair_data_out = insert_node!(graph, DataTask(0))
 
@@ -416,9 +477,6 @@ function generate_DAG(proc::AbstractProcessDefinition)
                     _edge_index_from_vp(input_particles[2]),
                 )
                 insert_edge!(graph, compute_pair, pair_data_out)
-
-                # get the spin/pol config of the input particles from the data_out names
-                index = _parse_node_names(in_nodes[1].name, in_nodes[2].name)
 
                 if !haskey(pair_output_nodes_by_spin_pol, index)
                     pair_output_nodes_by_spin_pol[index] = Vector()
@@ -463,6 +521,12 @@ function generate_DAG(proc::AbstractProcessDefinition)
         positrons = propagated_outputs[po]
 
         for (a, b, c) in Iterators.product(photons, electrons, positrons) # for each spin/pol config of each part
+            index = _parse_node_names(a.name, b.name, c.name)
+            if !_is_index_valid_combination(proc, index)
+                # skip this triple creation if the spin/pol combination doesn't exist, same as for pairs
+                continue
+            end
+
             compute_triples = insert_node!(graph, ComputeTask_Triple())
             data_triples = insert_node!(graph, DataTask(0))
 
@@ -472,7 +536,6 @@ function generate_DAG(proc::AbstractProcessDefinition)
 
             insert_edge!(graph, compute_triples, data_triples)
 
-            index = _parse_node_names(a.name, b.name, c.name)
             if !haskey(triples_results, index)
                 triples_results[index] = Vector{DataTaskNode}()
             end
