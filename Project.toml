@@ -25,8 +25,11 @@ Reexport = "1"
 julia = "1.10"
 
 [extras]
+QEDprocesses = "46de9c38-1bb3-4547-a1ec-da24d767fdad"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["SafeTestsets", "Test"]
+test = ["SafeTestsets", "Test", "Random", "QEDprocesses", "RuntimeGeneratedFunctions"]

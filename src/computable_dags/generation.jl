@@ -317,7 +317,7 @@ _edge_index_from_vp(vp::VirtualParticle) = _edge_index_from_species(particle_spe
     _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tuple)
 
 Internal function for DAG generation. Checks for a given process and a spin/pol combination whether the spin/pol combination is
-part of the process, including checking for [`QEDbase.SyncedPol`](@extref) and [`QEDbase.SyncedSpin`](@extref).
+part of the process, including checking for [`QEDbase.SyncedPolarization`](@extref) and [`QEDbase.SyncedSpin`](@extref).
 """
 function _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tuple)
     proc_spin_pols = (incoming_spin_pols(proc)..., outgoing_spin_pols(proc)...)
@@ -372,6 +372,7 @@ Generate and return a [`ComputableDAGs.DAG`](@extref), representing the computat
 """
 function generate_DAG(proc::AbstractProcessDefinition)
     particles = virtual_particles(proc)                  # virtual particles that will be input to propagator tasks
+    # TODO apparently this sort is deprecated, change it
     pairs = sort(particle_pairs(particles))              # pairs to generate the pair tasks
     triples = sort(total_particle_triples(particles))    # triples to generate the triple tasks
 
