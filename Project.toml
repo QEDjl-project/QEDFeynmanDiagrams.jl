@@ -11,7 +11,6 @@ LRUCache = "8ac3fa9e-de4c-5943-b1dc-09c6b5f20637"
 Memoization = "6fafb56a-5788-4b4e-91ca-c0cea6611c73"
 QEDbase = "10e22c08-3ccb-4172-bfcf-7d7aa3d04d93"
 QEDcore = "35dc0263-cb5f-4c33-a114-1d7f54ab753e"
-QEDprocesses = "46de9c38-1bb3-4547-a1ec-da24d767fdad"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 
 [compat]
@@ -26,8 +25,11 @@ Reexport = "1"
 julia = "1.10"
 
 [extras]
+QEDprocesses = "46de9c38-1bb3-4547-a1ec-da24d767fdad"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["SafeTestsets", "Test"]
+test = ["SafeTestsets", "Test", "Random", "QEDprocesses", "RuntimeGeneratedFunctions"]

@@ -26,9 +26,10 @@ jobs:
         with:
           version: "1.10"
 
-      - name: Instantiate
+      - name: Instantiate # TODO: currently needs dev versions of QEDbase and QEDprocesses, remove once they are released again
         run: |
           julia --project=./ -e 'using Pkg; Pkg.instantiate()'
+          julia --project=./ ./add_QED_dev.jl
 
       - name: Run tests
         run: julia --project=./ -t 4 -e 'using Pkg; Pkg.test()' -O0

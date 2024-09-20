@@ -3,6 +3,9 @@
 ```@meta
 CurrentModule = QEDFeynmanDiagrams
 ```
+```@index
+Pages = ["internal.md"]
+```
 
 ## Types
 
@@ -13,9 +16,10 @@ AbstractTreeLevelFeynmanDiagram
 ## Functions
 
 ```@docs
-disjunct
-contains
-make_up
-are_total
+_is_index_valid_combination
 _pseudo_virtual_particles
+are_total
+contains
+disjunct
+make_up
 ```

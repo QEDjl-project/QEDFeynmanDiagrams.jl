@@ -16,7 +16,7 @@ end
 # import so we don't have to repeat it all the time
 import ComputableDAGs: compute, compute_effort, children
 
-const e = sqrt(4π / 137)
+const e = sqrt(4π / 137.035999177)
 const VERTEX = -1im * e * gamma()
 
 compute_effort(::ComputeTask_BaseState) = 0
@@ -42,9 +42,7 @@ struct BaseStateInput{PS_T<:AbstractParticleStateful,SPIN_POL_T<:AbstractSpinOrP
     spin_pol::SPIN_POL_T
 end
 
-function compute(
-    ::ComputeTask_BaseState, input::BaseStateInput{PS,SPIN_POL}
-) where {PS,SPIN_POL}
+function compute(::ComputeTask_BaseState, input::BaseStateInput)
     species = particle_species(input.particle)
     if is_outgoing(input.particle)
         species = _invert(species)
@@ -82,7 +80,7 @@ end
 end
 
 function _vp_momentum(
-    vp::VirtualParticle{PROC,SPECIES,I,O}, psp::PhaseSpacePoint
+    vp::VirtualParticle{PROC,SPECIES,I,O}, psp::AbstractPhaseSpacePoint
 ) where {PROC,SPECIES,I,O}
     return _masked_sum(momenta(psp, Incoming()), _in_contributions(vp)) -
            _masked_sum(momenta(psp, Outgoing()), _out_contributions(vp))
@@ -113,48 +111,46 @@ end
 
 @inline function compute( # photon, electron
     ::ComputeTask_Pair,
-    photon::Propagated{Photon,V1},
-    electron::Propagated{Electron,V2},
-) where {V1,V2}
+    photon::Propagated{Photon},
+    electron::Propagated{Electron},
+)
     return Unpropagated(Electron(), photon.value * VERTEX * electron.value) # photon - electron -> electron
 end
 @inline function compute( # photon, positron
     ::ComputeTask_Pair,
-    photon::Propagated{Photon,V1},
-    positron::Propagated{Positron,V2},
-) where {V1,V2}
+    photon::Propagated{Photon},
+    positron::Propagated{Positron},
+)
     return Unpropagated(Positron(), positron.value * VERTEX * photon.value) # photon - positron -> positron
 end
 @inline function compute( # electron, positron
     ::ComputeTask_Pair,
-    electron::Propagated{Electron,V1},
-    positron::Propagated{Positron,V2},
-) where {V1,V2}
+    electron::Propagated{Electron},
+    positron::Propagated{Positron},
+)
     return Unpropagated(Photon(), positron.value * VERTEX * electron.value)  # electron - positron -> photon
 end
 
-@inline function compute(
-    ::ComputeTask_PropagatePairs, prop::PROP_V, photon::Unpropagated{Photon,VAL}
-) where {PROP_V,VAL}
+@inline function compute(::ComputeTask_PropagatePairs, prop, photon::Unpropagated{Photon})
     return Propagated(Photon(), photon.value * prop)
 end
 @inline function compute(
-    ::ComputeTask_PropagatePairs, prop::PROP_V, electron::Unpropagated{Electron,VAL}
-) where {PROP_V,VAL}
+    ::ComputeTask_PropagatePairs, prop, electron::Unpropagated{Electron}
+)
     return Propagated(Electron(), prop * electron.value)
 end
 @inline function compute(
-    ::ComputeTask_PropagatePairs, prop::PROP_V, positron::Unpropagated{Positron,VAL}
-) where {PROP_V,VAL}
+    ::ComputeTask_PropagatePairs, prop, positron::Unpropagated{Positron}
+)
     return Propagated(Positron(), positron.value * prop)
 end
 
 @inline function compute(
     ::ComputeTask_Triple,
-    photon::Propagated{Photon,V1},
-    electron::Propagated{Electron,V2},
-    positron::Propagated{Positron,V3},
-) where {V1,V2,V3}
+    photon::Propagated{Photon},
+    electron::Propagated{Electron},
+    positron::Propagated{Positron},
+)
     return positron.value * (VERTEX * photon.value) * electron.value
 end
 

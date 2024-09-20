@@ -1,5 +1,9 @@
 # Public Interface
 
+```@index
+Pages = ["public.md"]
+```
+
 ## Types
 
 ```@docs
@@ -9,9 +13,9 @@ VirtualParticle
 
 ## Functions
 ```@docs
-feynman_diagrams
 external_particles
-virtual_particles
-process
+feynman_diagrams
 generate_DAG
+process
+virtual_particles
 ```

@@ -35,3 +35,6 @@ Manifest.toml
 .julia
 **/.ipynb_checkpoints/
 *.bkp
+
+*.gif
+*.jld2
