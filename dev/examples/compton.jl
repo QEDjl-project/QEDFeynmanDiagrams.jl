@@ -16,17 +16,13 @@ using QEDprocesses
 n = 4;
 
 # Now we setup the scattering process accordingly. We consider all spin/polarization
-# combinations of the particles except for the incoming photons.
-#
-# !!! note
-#     The functionality is not quite ready yet, but in the future, the incoming photons
-#     can be synced using `SyncedPol` from QEDbase. This would emulate all incoming
-#     photons having the same polarization, for example from a laser.
+# combinations of the particles except for the incoming photons, where the polarizations are synced using [`QEDbase.SyncedPolarization`](@extref). 
+# This emulates all synced photons having the same, but still indefinite, polarization, for example from a laser.
 proc = ScatteringProcess(
-    (Electron(), ntuple(_ -> Photon(), n)...),  # incoming particles
-    (Electron(), Photon()),                     # outgoing particles
-    (AllSpin(), ntuple(_ -> PolX(), n)...),     # incoming particle spin/pols
-    (AllSpin(), AllPol()),                      # outgoing particle spin/pols
+    (Electron(), ntuple(_ -> Photon(), n)...),     # incoming particles
+    (Electron(), Photon()),                        # outgoing particles
+    (AllSpin(), ntuple(_ -> SyncedPol(1), n)...),  # incoming particle spin/pols
+    (AllSpin(), AllPol()),                         # outgoing particle spin/pols
 )
 
 # The [`feynman_diagrams`](@ref) function returns an iterator for all possible Feynman diagrams
