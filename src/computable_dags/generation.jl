@@ -375,7 +375,84 @@ function _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tup
 end
 
 """
-    ComputableDAGs.graph(proc::AbstractProcessDefinition)
+    _get_canonical_index(proc::AbstractProcessDefinition, dir::ParticleDirection, index::Int)
+
+Returns a tuple of a symbol which is either `:left` or `:right` in the case of fermions, and `:boson`, in the case of a boson, and an Int giving the index of the particle.
+"""
+function _get_canonical_index(
+    proc::AbstractProcessDefinition, dir::ParticleDirection, index::Int
+)
+    species = particles(proc, dir)[index]
+    species_index = _species_index(proc, dir, species, index)
+
+    inc_parts = number_particles(proc, Incoming(), Electron())
+    inc_anti_parts = number_particles(proc, Incoming(), Positron())
+
+    if is_boson(species)
+        return (:boson, species_index)
+    elseif is_particle(species) && is_incoming(dir)
+        return (:left, species_index)
+    elseif is_anti_particle(species) && is_outgoing(dir)
+        return (:left, species_index + inc_parts)
+    elseif is_anti_particle(species) && is_incoming(dir)
+        return (:right, species_index)
+    elseif is_particle(species) && is_outgoing(dir)
+        return (:right, species_index + inc_anti_parts)
+    end
+
+    throw("unknown species/dir combination encountered: $(species)/$(dir)")
+end
+
+"""
+    _get_fermion_exchange_number(vp::VirtualParticle)
+
+For a given [`VirtualParticle`](@ref), return the number of participating fermion indices minus the number of minimum fermion indices.
+E.g. if the fermions participating are l1, l2, r3 and r4, then 2 pairs are participating, so the minimum indices is 2, but the actual number
+of seen indces is 4, so 4 - 2 = 2 is returned.
+
+The indices themselves are simply canonical indices given to left-side fermions (in-electrons, out-positrons, etc.) and right-side fermions (out-electrons, in-positrons, etc.)
+"""
+function _get_fermion_exchange_number(vp::VirtualParticle)
+    left_side_ferms = Set{Int}()
+    right_side_ferms = Set{Int}()
+
+    for (contribs, dir) in Iterators.zip(_contributions(vp), (Incoming(), Outgoing()))
+        c = 0
+        for contrib in contribs
+            c += 1
+            if !contrib
+                continue
+            end
+            (lr, index) = _get_canonical_index(process(vp), dir, c)
+            if lr == :left
+                push!(left_side_ferms, index)
+            elseif lr == :right
+                push!(right_side_ferms, index)
+            end
+        end
+    end
+
+    @assert length(left_side_ferms) == length(right_side_ferms) "leftside: $(left_side_ferms), rightside: $right_side_ferms, species: $(particle_species(vp))"
+
+    return length(union(left_side_ferms, right_side_ferms)) - length(left_side_ferms)
+end
+
+"""
+    _negate_vp(vp::VirtualParticle)
+
+!!! warn
+    Rewrite this, we actually multiply 1im
+"""
+function _negate_vp(vp::VirtualParticle)
+    if particle_species(vp) != Photon()
+        return false
+    end
+
+    return isodd(_get_fermion_exchange_number(vp))
+end
+
+"""
+    graph(proc::AbstractProcessDefinition)
 
 Generate and return a [`ComputableDAGs.DAG`](@extref), representing the computation for the squared matrix element of this scattering process, summed over spin and polarization combinations allowed by the process.
 """
@@ -496,16 +573,21 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
         propagator_node = propagator_task_outputs[product_particle]
 
         for (index, nodes_to_sum) in pair_output_nodes_by_spin_pol
-            compute_pairs_sum = insert_node!(
-                g, ComputeTask_CollectPairs(length(nodes_to_sum))
-            )
+            negate = _negate_vp(product_particle)
+
+            compute_pairs_sum = if !negate
+                insert_node!(g, ComputeTask_CollectPairs(length(nodes_to_sum)))
+            else
+                insert_node!(g, ComputeTask_CollectPairsExchanged(length(nodes_to_sum)))
+            end
+
             data_pairs_sum = insert_node!(g, DataTask(0))
             compute_propagated = insert_node!(g, ComputeTask_PropagatePairs())
             # give this out node the correct name
             data_out_propagated = insert_node!(g, DataTask(0), _make_node_name([index...]))
 
             for node in nodes_to_sum
-                insert_edge!(g, node, compute_pairs_sum)
+                insert_edge!(g, node, compute_pairs_sum, 2)
             end
 
             insert_edge!(g, compute_pairs_sum, data_pairs_sum)
@@ -533,7 +615,13 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
                 continue
             end
 
-            compute_triples = insert_node!(g, ComputeTask_Triple())
+            negate = _negate_vp(ph)
+
+            compute_triples = if !negate
+                insert_node!(g, ComputeTask_Triple())
+            else
+                insert_node!(g, ComputeTask_TripleExchanged())
+            end
             data_triples = insert_node!(g, DataTask(0))
 
             insert_edge!(g, a, compute_triples, 1) # first argument photons
