@@ -42,7 +42,9 @@ struct BaseStateInput{PS_T<:AbstractParticleStateful,SPIN_POL_T<:AbstractSpinOrP
     spin_pol::SPIN_POL_T
 end
 
-function compute(::ComputeTask_BaseState, input::BaseStateInput)
+function compute(
+    ::ComputeTask_BaseState, input::BaseStateInput{PS_T,SPIN_POL_T}
+) where {PS_T<:AbstractParticleStateful,SPIN_POL_T<:AbstractSpinOrPolarization}
     species = particle_species(input.particle)
     if is_outgoing(input.particle)
         species = _invert(species)
@@ -62,7 +64,7 @@ end
 
 struct PropagatorInput{VP_T<:VirtualParticle,PSP_T<:AbstractPhaseSpacePoint}
     vp::VP_T
-    psp::Ref{PSP_T}
+    psp::PSP_T
 end
 
 @inline _masked_sum(::Tuple{}, ::Tuple{}) = error("masked sum needs at least one argument")
@@ -80,8 +82,8 @@ end
 end
 
 function _vp_momentum(
-    vp::VirtualParticle{PROC,SPECIES,I,O}, psp::AbstractPhaseSpacePoint
-) where {PROC,SPECIES,I,O}
+    vp::VirtualParticle{PROC,I,O}, psp::AbstractPhaseSpacePoint
+) where {PROC,I,O}
     return _masked_sum(momenta(psp, Incoming()), _in_contributions(vp)) -
            _masked_sum(momenta(psp, Outgoing()), _out_contributions(vp))
 end
@@ -89,7 +91,7 @@ end
 function compute(
     ::ComputeTask_Propagator, input::PropagatorInput{VP_T,PSP_T}
 ) where {VP_T,PSP_T}
-    vp_mom = _vp_momentum(input.vp, input.psp[])
+    vp_mom = _vp_momentum(input.vp, input.psp)
     vp_species = particle_species(input.vp)
     inner = QEDbase.propagator(vp_species, vp_mom)
     return inner

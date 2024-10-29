@@ -98,7 +98,7 @@ function ComputableDAGs.input_expr(
 
         return Meta.parse(
             "QEDFeynmanDiagrams.BaseStateInput(
-                ParticleStateful($dir_str, $species_str, momentum($psp_symbol, $dir_str, $species_str, $index)),
+                ParticleStateful($dir_str, $species_str, momentum($psp_symbol, $dir_str, $species_str, Val($index))),
                 $sp_str,
             )",
         )
@@ -114,7 +114,7 @@ function ComputableDAGs.input_expr(
                                 $(vp.in_particle_contributions),
                                 $(vp.out_particle_contributions)
                               ),
-                              Ref($psp_symbol)
+                              $psp_symbol
                           )")
     else
         throw(InvalidInputError("failed to parse node name \"$name\""))
@@ -124,16 +124,14 @@ end
 function ComputableDAGs.input_type(p::AbstractProcessDefinition)
     # TODO correctly assemble abstract types here
     # See https://github.com/QEDjl-project/QEDFeynmanDiagrams.jl/issues/29
-    return Any
     in_t = QEDcore._assemble_tuple_type(incoming_particles(p), Incoming(), SFourMomentum)
     out_t = QEDcore._assemble_tuple_type(outgoing_particles(p), Outgoing(), SFourMomentum)
-    return PhaseSpacePoint{
+    return AbstractPhaseSpacePoint{
         typeof(p),
-        PerturbativeQED,
-        PhasespaceDefinition{SphericalCoordinateSystem,ElectronRestFrame},
+        <:AbstractModelDefinition,
+        <:AbstractPhasespaceDefinition,
         Tuple{in_t...},
         Tuple{out_t...},
-        SFourMomentum,
     }
 end
 
@@ -370,8 +368,12 @@ end
 
 Generate and return a [`ComputableDAGs.DAG`](@extref), representing the computation for the squared matrix element of this scattering process, summed over spin and polarization combinations allowed by the process.
 """
-function generate_DAG(proc::AbstractProcessDefinition)
-    particles = virtual_particles(proc)                  # virtual particles that will be input to propagator tasks
+function generate_DAG(proc::PROC) where {PROC<:AbstractProcessDefinition}
+    I = number_incoming_particles(proc)
+    O = number_outgoing_particles(proc)
+    SPECIFIC_VP = VirtualParticle{PROC,NTuple{I,Bool},NTuple{O,Bool}}
+    particles::Vector{SPECIFIC_VP} = virtual_particles(proc)                  # virtual particles that will be input to propagator tasks
+
     # TODO apparently this sort is deprecated, change it
     pairs = sort(particle_pairs(particles))              # pairs to generate the pair tasks
     triples = sort(total_particle_triples(particles))    # triples to generate the triple tasks

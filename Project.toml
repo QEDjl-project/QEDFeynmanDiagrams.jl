@@ -1,7 +1,7 @@
 name = "QEDFeynmanDiagrams"
 uuid = "3232ad24-8ec1-4588-843e-e2ed2eae1ff3"
-authors = ["AntonReinhard <a.reinhard@hzdr.de>", "Uwe Hernandez Acosta <u.hernandez@hzdr.de>"]
 version = "0.1.0"
+authors = ["AntonReinhard <a.reinhard@hzdr.de>", "Uwe Hernandez Acosta <u.hernandez@hzdr.de>"]
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
@@ -19,8 +19,9 @@ ComputableDAGs = "0.1"
 DataStructures = "0.18"
 LRUCache = "1"
 Memoization = "0.2"
-QEDbase = "0.2"
-QEDcore = "0.1"
+QEDbase = "0.3"
+QEDcore = "0.2"
+QEDprocesses = "0.3"
 Reexport = "1"
 julia = "1.10"
 

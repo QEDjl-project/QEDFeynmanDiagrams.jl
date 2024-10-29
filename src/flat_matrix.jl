@@ -2,7 +2,7 @@
 # for internal use only
 struct FlatMatrix{T,N,M}
     values::NTuple{N,T}
-    indices::NTuple{M,Int}
+    indices::NTuple{M,Int64}
 
     function FlatMatrix(v::Vector{Vector{T}}) where {T}
         M = length(v)
@@ -11,7 +11,14 @@ struct FlatMatrix{T,N,M}
         values = NTuple{N,T}(vcat(v...))
         indices = ntuple(i -> sum(length.(v[1:(i - 1)])), M)
 
-        return new{Int,N,M}(values, indices)
+        return new{T,N,M}(values, indices)
+    end
+
+    function FlatMatrix{T,N,M}(v::Vector{Vector{T}}) where {N,M,T}
+        values = NTuple{N,T}(vcat(v...))
+        indices = ntuple(i -> sum(length.(v[1:(i - 1)])), M)
+
+        return new{T,N,M}(values, indices)
     end
 end
 
