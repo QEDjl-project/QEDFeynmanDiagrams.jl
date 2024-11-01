@@ -15,7 +15,7 @@ VirtualParticle
 ```@docs
 external_particles
 feynman_diagrams
-generate_DAG
+graph
 process
 virtual_particles
 ```

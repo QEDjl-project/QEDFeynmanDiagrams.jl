@@ -364,11 +364,11 @@ function _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tup
 end
 
 """
-    generate_DAG(proc::AbstractProcessDefinition)
+    ComputableDAGs.graph(proc::AbstractProcessDefinition)
 
 Generate and return a [`ComputableDAGs.DAG`](@extref), representing the computation for the squared matrix element of this scattering process, summed over spin and polarization combinations allowed by the process.
 """
-function generate_DAG(proc::PROC) where {PROC<:AbstractProcessDefinition}
+function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition}
     I = number_incoming_particles(proc)
     O = number_outgoing_particles(proc)
     SPECIFIC_VP = VirtualParticle{PROC,NTuple{I,Bool},NTuple{O,Bool}}
@@ -378,7 +378,7 @@ function generate_DAG(proc::PROC) where {PROC<:AbstractProcessDefinition}
     sort!(pairs)
     triples = sort(total_particle_triples(particles))    # triples to generate the triple tasks
 
-    graph = DAG()
+    g = DAG()
 
     # -- Base State Tasks --
     propagated_outputs = Dict{VirtualParticle,Vector{Node}}()
@@ -395,19 +395,19 @@ function generate_DAG(proc::PROC) where {PROC<:AbstractProcessDefinition}
                     # names are "bs_<dir>_<species>_<spin/pol>_<index>"
                     data_node_name = "bs_$(_dir_str(dir))_$(_species_str(species))_$(_spin_pol_str(spin_pol))_$(index)"
 
-                    data_in = insert_node!(graph, DataTask(0), data_node_name)
+                    data_in = insert_node!(g, DataTask(0), data_node_name)
 
                     # generate initial base_state tasks
-                    compute_base_state = insert_node!(graph, ComputeTask_BaseState())
+                    compute_base_state = insert_node!(g, ComputeTask_BaseState())
 
                     data_out = insert_node!(
-                        graph,
+                        g,
                         DataTask(0),
                         "$(_total_index(proc, dir, species, index))_$(_spin_pol_str(spin_pol))",
                     )
 
-                    insert_edge!(graph, data_in, compute_base_state)
-                    insert_edge!(graph, compute_base_state, data_out)
+                    insert_edge!(g, data_in, compute_base_state)
+                    insert_edge!(g, compute_base_state, data_out)
 
                     if !haskey(propagated_outputs, p)
                         propagated_outputs[p] = Vector{Node}()
@@ -426,12 +426,12 @@ function generate_DAG(proc::PROC) where {PROC<:AbstractProcessDefinition}
 
         data_node_name = "pr_$vp_index"
 
-        data_in = insert_node!(graph, DataTask(0), data_node_name)
-        compute_vp_propagator = insert_node!(graph, ComputeTask_Propagator())
-        data_out = insert_node!(graph, DataTask(0))
+        data_in = insert_node!(g, DataTask(0), data_node_name)
+        compute_vp_propagator = insert_node!(g, ComputeTask_Propagator())
+        data_out = insert_node!(g, DataTask(0))
 
-        insert_edge!(graph, data_in, compute_vp_propagator)
-        insert_edge!(graph, compute_vp_propagator, data_out)
+        insert_edge!(g, data_in, compute_vp_propagator)
+        insert_edge!(g, compute_vp_propagator, data_out)
 
         propagator_task_outputs[vp] = data_out
     end
@@ -464,22 +464,16 @@ function generate_DAG(proc::PROC) where {PROC<:AbstractProcessDefinition}
 
                 # make the compute pair nodes for every combination of the found input_particle_nodes to get all spin/pol combinations
 
-                compute_pair = insert_node!(graph, ComputeTask_Pair())
-                pair_data_out = insert_node!(graph, DataTask(0))
+                compute_pair = insert_node!(g, ComputeTask_Pair())
+                pair_data_out = insert_node!(g, DataTask(0))
 
                 insert_edge!(
-                    graph,
-                    in_nodes[1],
-                    compute_pair,
-                    _edge_index_from_vp(input_particles[1]),
+                    g, in_nodes[1], compute_pair, _edge_index_from_vp(input_particles[1])
                 )
                 insert_edge!(
-                    graph,
-                    in_nodes[2],
-                    compute_pair,
-                    _edge_index_from_vp(input_particles[2]),
+                    g, in_nodes[2], compute_pair, _edge_index_from_vp(input_particles[2])
                 )
-                insert_edge!(graph, compute_pair, pair_data_out)
+                insert_edge!(g, compute_pair, pair_data_out)
 
                 if !haskey(pair_output_nodes_by_spin_pol, index)
                     pair_output_nodes_by_spin_pol[index] = Vector()
@@ -492,25 +486,23 @@ function generate_DAG(proc::PROC) where {PROC<:AbstractProcessDefinition}
 
         for (index, nodes_to_sum) in pair_output_nodes_by_spin_pol
             compute_pairs_sum = insert_node!(
-                graph, ComputeTask_CollectPairs(length(nodes_to_sum))
+                g, ComputeTask_CollectPairs(length(nodes_to_sum))
             )
-            data_pairs_sum = insert_node!(graph, DataTask(0))
-            compute_propagated = insert_node!(graph, ComputeTask_PropagatePairs())
+            data_pairs_sum = insert_node!(g, DataTask(0))
+            compute_propagated = insert_node!(g, ComputeTask_PropagatePairs())
             # give this out node the correct name
-            data_out_propagated = insert_node!(
-                graph, DataTask(0), _make_node_name([index...])
-            )
+            data_out_propagated = insert_node!(g, DataTask(0), _make_node_name([index...]))
 
             for node in nodes_to_sum
-                insert_edge!(graph, node, compute_pairs_sum)
+                insert_edge!(g, node, compute_pairs_sum)
             end
 
-            insert_edge!(graph, compute_pairs_sum, data_pairs_sum)
+            insert_edge!(g, compute_pairs_sum, data_pairs_sum)
 
-            insert_edge!(graph, propagator_node, compute_propagated, 1)
-            insert_edge!(graph, data_pairs_sum, compute_propagated, 2)
+            insert_edge!(g, propagator_node, compute_propagated, 1)
+            insert_edge!(g, data_pairs_sum, compute_propagated, 2)
 
-            insert_edge!(graph, compute_propagated, data_out_propagated)
+            insert_edge!(g, compute_propagated, data_out_propagated)
 
             push!(propagated_outputs[product_particle], data_out_propagated)
         end
@@ -530,14 +522,14 @@ function generate_DAG(proc::PROC) where {PROC<:AbstractProcessDefinition}
                 continue
             end
 
-            compute_triples = insert_node!(graph, ComputeTask_Triple())
-            data_triples = insert_node!(graph, DataTask(0))
+            compute_triples = insert_node!(g, ComputeTask_Triple())
+            data_triples = insert_node!(g, DataTask(0))
 
-            insert_edge!(graph, a, compute_triples, 1) # first argument photons
-            insert_edge!(graph, b, compute_triples, 2) # second argument electrons
-            insert_edge!(graph, c, compute_triples, 3) # third argument positrons
+            insert_edge!(g, a, compute_triples, 1) # first argument photons
+            insert_edge!(g, b, compute_triples, 2) # second argument electrons
+            insert_edge!(g, c, compute_triples, 3) # third argument positrons
 
-            insert_edge!(graph, compute_triples, data_triples)
+            insert_edge!(g, compute_triples, data_triples)
 
             if !haskey(triples_results, index)
                 triples_results[index] = Vector{DataTaskNode}()
@@ -550,27 +542,27 @@ function generate_DAG(proc::PROC) where {PROC<:AbstractProcessDefinition}
     collected_triples = Vector{DataTaskNode}()
     for (index, results) in triples_results
         compute_collect_triples = insert_node!(
-            graph, ComputeTask_CollectTriples(length(results))
+            g, ComputeTask_CollectTriples(length(results))
         )
-        data_collect_triples = insert_node!(graph, DataTask(0))
+        data_collect_triples = insert_node!(g, DataTask(0))
 
         for triple in results
-            insert_edge!(graph, triple, compute_collect_triples)
+            insert_edge!(g, triple, compute_collect_triples)
         end
-        insert_edge!(graph, compute_collect_triples, data_collect_triples)
+        insert_edge!(g, compute_collect_triples, data_collect_triples)
 
         push!(collected_triples, data_collect_triples)
     end
 
     # Finally, abs2 sum over spin/pol configurations
     compute_total_result = insert_node!(
-        graph, ComputeTask_SpinPolCumulation(length(collected_triples))
+        g, ComputeTask_SpinPolCumulation(length(collected_triples))
     )
     for finished_triple in collected_triples
-        insert_edge!(graph, finished_triple, compute_total_result)
+        insert_edge!(g, finished_triple, compute_total_result)
     end
 
-    final_data_out = insert_node!(graph, DataTask(0))
-    insert_edge!(graph, compute_total_result, final_data_out)
-    return graph
+    final_data_out = insert_node!(g, DataTask(0))
+    insert_edge!(g, compute_total_result, final_data_out)
+    return g
 end

@@ -32,7 +32,7 @@ length(feynman_diagrams(proc))
 
 # Next, we can generate the DAG representing the computation for our scattering process'
 # squared matrix element. This uses `ComputableDAGs.jl`.
-dag = generate_DAG(proc)
+dag = graph(proc)
 
 # To continue, we will need [`ComputableDAGs.jl`](https://github.com/ComputableDAGs/ComputableDAGs.jl). Since `ComputableDAGs.jl` uses 
 # `RuntimeGeneratedFunction`s as the return type of [`ComputableDAGs.get_compute_function`](@extref), we need
