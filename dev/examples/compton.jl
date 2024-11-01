@@ -33,7 +33,7 @@ length(feynman_diagrams(proc))
 
 # Next, we can generate the DAG representing the computation for our scattering process'
 # squared matrix element. This uses [`ComputableDAGs.jl`](https://github.com/ComputableDAGs/ComputableDAGs.jl).
-dag = generate_DAG(proc)
+dag = graph(proc)
 
 # In this graph output you can see the number of nodes necessary to compute.
 # Note that for larger processes, the number of total nodes can be *lower* than
