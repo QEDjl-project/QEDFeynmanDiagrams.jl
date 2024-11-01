@@ -12,7 +12,7 @@ using DataStructures
 
 export FeynmanDiagram, VirtualParticle
 export feynman_diagrams
-export external_particles, virtual_particles, process, generate_DAG
+export external_particles, virtual_particles, process, graph
 
 include("flat_matrix.jl")
 

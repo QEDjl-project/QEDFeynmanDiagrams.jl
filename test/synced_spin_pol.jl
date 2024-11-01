@@ -34,9 +34,9 @@ RNG = MersenneTwister(0)
         (AllSpin(), AllPol()),
     )
 
-    g_synced = generate_DAG(proc_synced)
-    g_polx = generate_DAG(proc_polx)
-    g_poly = generate_DAG(proc_poly)
+    g_synced = graph(proc_synced)
+    g_polx = graph(proc_polx)
+    g_poly = graph(proc_poly)
 
     @test length(g_polx.nodes) == length(g_poly.nodes)
     @test length(g_polx.nodes) < length(g_synced.nodes) < 2 * length(g_polx.nodes)
@@ -99,8 +99,8 @@ GC.gc()
         )
     end
 
-    g_synced = generate_DAG(proc_synced)
-    graphs = generate_DAG.(procs)
+    g_synced = graph(proc_synced)
+    graphs = graph.(procs)
 
     for g in graphs[2:end]
         @test length(graphs[1].nodes) == length(g.nodes)
