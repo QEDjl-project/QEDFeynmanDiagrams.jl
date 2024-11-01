@@ -121,17 +121,28 @@ function ComputableDAGs.input_expr(
     end
 end
 
+# recursion termination: base case
+@inline _assemble_input_type(::Tuple{}, ::ParticleDirection) = ()
+
+# function assembling the correct type information for the tuple of ParticleStatefuls in a phasespace point for input_type
+@inline function _assemble_input_type(
+    particle_types::Tuple{SPECIES_T,Vararg{AbstractParticleType}}, dir::DIR_T
+) where {SPECIES_T<:AbstractParticleType,DIR_T<:ParticleDirection}
+    return (
+        AbstractParticleStateful{DIR_T,SPECIES_T},
+        _assemble_input_type(particle_types[2:end], dir)...,
+    )
+end
+
 function ComputableDAGs.input_type(p::AbstractProcessDefinition)
-    # TODO correctly assemble abstract types here
-    # See https://github.com/QEDjl-project/QEDFeynmanDiagrams.jl/issues/29
-    in_t = QEDcore._assemble_tuple_type(incoming_particles(p), Incoming(), SFourMomentum)
-    out_t = QEDcore._assemble_tuple_type(outgoing_particles(p), Outgoing(), SFourMomentum)
+    in_t = _assemble_input_type(incoming_particles(p), Incoming())
+    out_t = _assemble_input_type(outgoing_particles(p), Outgoing())
     return AbstractPhaseSpacePoint{
         typeof(p),
         <:AbstractModelDefinition,
         <:AbstractPhasespaceDefinition,
-        Tuple{in_t...},
-        Tuple{out_t...},
+        <:Tuple{in_t...},
+        <:Tuple{out_t...},
     }
 end
 
