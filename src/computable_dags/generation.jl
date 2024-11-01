@@ -374,8 +374,8 @@ function generate_DAG(proc::PROC) where {PROC<:AbstractProcessDefinition}
     SPECIFIC_VP = VirtualParticle{PROC,NTuple{I,Bool},NTuple{O,Bool}}
     particles::Vector{SPECIFIC_VP} = virtual_particles(proc)                  # virtual particles that will be input to propagator tasks
 
-    # TODO apparently this sort is deprecated, change it
-    pairs = sort(particle_pairs(particles))              # pairs to generate the pair tasks
+    pairs = OrderedDict(particle_pairs(particles))       # pairs to generate the pair tasks
+    sort!(pairs)
     triples = sort(total_particle_triples(particles))    # triples to generate the triple tasks
 
     graph = DAG()
