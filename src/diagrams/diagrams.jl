@@ -53,6 +53,8 @@ struct FeynmanDiagram{N,E,U,T,M,FM} <:
     end
 end
 
+const OPEN_FERMION_CYCLE_T = Tuple{Int64,Int64}
+
 """
     VirtualParticle{
         PROC<:AbstractProcessDefinition,
@@ -73,15 +75,98 @@ struct VirtualParticle{PROC<:AbstractProcessDefinition,IT<:NTuple,OT<:NTuple}
     in_particle_contributions::IT
     out_particle_contributions::OT
 
+    # open cycles in the context of fermion permutations
+    # for n fermion lines in a process, there can be between 1 (like 1-2, 2-3, 3-1) and n (like 1-1, 2-2, 3-3) cycles
+    # where the left number represents the canonical fermion index and the right number the canonical antifermion index
+    open_cycles::Vector{OPEN_FERMION_CYCLE_T}
+
     function VirtualParticle(
         proc::PROC, species::PT, in_contrib::I, out_contrib::O
     ) where {PROC,PT,I,O}
-        return new{PROC,I,O}(proc, typeof(species), in_contrib, out_contrib)
+        return new{PROC,I,O}(
+            proc, typeof(species), in_contrib, out_contrib, OPEN_FERMION_CYCLE_T[]
+        )
     end
     function VirtualParticle{PROC,I,O}(
         proc::PROC, species::PT, in_contrib::I, out_contrib::O
     ) where {PROC,PT,I,O}
-        return new{PROC,I,O}(proc, typeof(species), in_contrib, out_contrib)
+        return new{PROC,I,O}(
+            proc, typeof(species), in_contrib, out_contrib, OPEN_FERMION_CYCLE_T[]
+        )
+    end
+    function VirtualParticle(
+        proc::PROC,
+        species::PT,
+        in_contrib::I,
+        out_contrib::O,
+        open_cycles::Vector{OPEN_FERMION_CYCLE_T},
+    ) where {PROC,PT,I,O}
+        return new{PROC,I,O}(proc, typeof(species), in_contrib, out_contrib, open_cycles)
+    end
+end
+
+function Base.hash(vp::VP, h::UInt) where {VP<:VirtualParticle}
+    h = hash(VP, h)
+    h = hash(vp.proc, h)
+    h = hash(vp.species, h)
+    h = hash(vp.in_particle_contributions, h)
+    h = hash(vp.out_particle_contributions, h)
+    h = hash(vp.open_cycles, h)
+    return h
+end
+
+function Base.isequal(vp1::VP, vp2::VP) where {VP<:VirtualParticle}
+    return vp1.species == vp2.species &&
+           vp1.in_particle_contributions == vp2.in_particle_contributions &&
+           vp1.out_particle_contributions == vp2.out_particle_contributions &&
+           vp1.open_cycles == vp2.open_cycles
+end
+
+function _canonical_fermion_indices(vp::VP) where {VP<:VirtualParticle}
+    left_ferms = Int[]
+    right_ferms = Int[]
+    for (contribs, dir) in Iterators.zip(
+        (vp.in_particle_contributions, vp.out_particle_contributions),
+        (Incoming(), Outgoing()),
+    )
+        c = 0
+        for contrib in contribs
+            c += 1
+            if !contrib
+                continue
+            end
+            (lr, index) = _get_canonical_index(vp.proc, dir, c)
+            if lr == :left
+                push!(left_ferms, index)
+            elseif lr == :right
+                push!(right_ferms, index)
+            end
+        end
+    end
+
+    return (left_ferms, right_ferms)
+end
+
+function _canonical_index(vp::VP) where {VP<:VirtualParticle}
+    @assert vp.species != Photon() "canonical index is only for (anti-)fermions"
+    (left_ferms, right_ferms) = _canonical_fermion_indices(vp)
+
+    # remove stuff
+    for cycle in vp.open_cycles
+        delete!(left_ferms, cycle[1])
+        delete!(right_ferms, cycle[2])
+    end
+
+    left_minus_right = [setdiff(Set(left_ferms), Set(right_ferms))...]
+    right_minus_left = [setdiff(Set(right_ferms), Set(left_ferms))...]
+    if length(left_minus_right) == 1
+        @assert isempty(right_minus_left)
+        return (:left, left_minus_right[begin])
+    elseif length(right_minus_left) == 1
+        @assert isempty(left_minus_right)
+        return (:right, right_minus_left[begin])
+    else
+        @assert false
     end
 end
 
@@ -89,7 +174,7 @@ function Base.show(io::IO, vp::VirtualParticle)
     pr = x -> x ? "1" : "0"
     return print(
         io,
-        "$(particle_species(vp)): \t$(*(pr.(vp.in_particle_contributions)...)) | $(*(pr.(vp.out_particle_contributions)...))",
+        "$(particle_species(vp)): \t$(*(pr.(vp.in_particle_contributions)...)) | $(*(pr.(vp.out_particle_contributions)...)) | $(vp.open_cycles)",
     )
 end
 
@@ -151,6 +236,7 @@ function _invert(virtual_particle::VirtualParticle)
         _invert(particle_species(virtual_particle)),
         ntuple(x -> !virtual_particle.in_particle_contributions[x], I),
         ntuple(x -> !virtual_particle.out_particle_contributions[x], O),
+        virtual_particle.open_cycles,
     )
 end
 
@@ -311,9 +397,17 @@ function _number_contributions(vp::VirtualParticle)
     return sum(vp.in_particle_contributions) + sum(vp.out_particle_contributions)
 end
 
+Base.isless(::ParticleDirection, ::ParticleDirection) = false
+Base.isless(::Incoming, ::Outgoing) = true
+Base.isless(::UnknownDirection, ::Incoming) = true
+Base.isless(::UnknownDirection, ::Outgoing) = true
+
 function Base.isless(a::VirtualParticle, b::VirtualParticle)
     if _number_contributions(a) == _number_contributions(b)
         if a.in_particle_contributions == b.in_particle_contributions
+            if a.out_particle_contributions == b.out_particle_contributions
+                return a.open_cycles < b.open_cycles
+            end
             return a.out_particle_contributions < b.out_particle_contributions
         end
         return a.in_particle_contributions < b.in_particle_contributions
@@ -383,6 +477,24 @@ function make_up(
         return false
     end
 
+    (s1, n1) = _canonical_index(a)
+    (s2, n2) = _canonical_index(b)
+
+    new_cycle = if (s1 == :left && s2 == :right)
+        (n1, n2)
+    elseif (s1 == :right && s2 == :left)
+        (n2, n1)
+    else
+        @assert false
+    end
+
+    cycles = reduce_cycles(
+        OPEN_FERMION_CYCLE_T[a.open_cycles..., b.open_cycles..., new_cycle]
+    )
+    if cycles != c.open_cycles
+        return false
+    end
+
     return true
 end
 
@@ -400,6 +512,16 @@ function are_total(
             return false
         end
     end
+
+    #=reduced_cycles = reduce_cycles(
+        OPEN_FERMION_CYCLE_T[a.open_cycles..., b.open_cycles..., c.open_cycles...]
+    )
+    # if the combination is total, there cannot be any leftover open cycles
+    if reduced_cycles != OPEN_FERMION_CYCLE_T[]
+        @info "rejected total because leftover cycles: $reduced_cycles\n$a\n$b\n$c"
+        return false
+    end
+    =#
 
     return true
 end
@@ -467,16 +589,10 @@ function total_particle_triples(
                 continue
             end
 
-            # create the only partner the ph and e could have together, then look for it in the actual positrons
-            expected_p = _invert(
-                VirtualParticle(
-                    proc, particle_species(e), (_contributions(ph) + _contributions(e))...
-                ),
-            )
-
-            if expected_p in positrons
-                @assert are_total(ph, e, expected_p)
-                push!(result_triples, (ph, e, expected_p))
+            for p in positrons
+                if are_total(ph, e, p)
+                    push!(result_triples, (ph, e, p))
+                end
             end
         end
     end
@@ -797,6 +913,128 @@ end
     return 0 + _count_particles(parts[2:end], bools[2:end], species)
 end
 
+function reduce_cycles(vec::Vector{OPEN_FERMION_CYCLE_T})
+    # CAUTION: chat-gpt generated, but tested
+    while true
+        # Flag to check if changes occur
+        changed = false
+        new_vec = OPEN_FERMION_CYCLE_T[]
+        skip_indices = Set{Int}()
+
+        for i in 1:length(vec)
+            if i in skip_indices
+                continue
+            end
+
+            fused = false
+            for j in (i + 1):length(vec)
+                if j in skip_indices
+                    continue
+                end
+
+                a, b = vec[i]
+                c, d = vec[j]
+
+                # Fuse if b == c
+                if b == c
+                    push!(new_vec, (a, d))
+                    push!(skip_indices, j)
+                    changed = true
+                    fused = true
+                    break
+                    # Fuse if d == a
+                elseif d == a
+                    push!(new_vec, (c, b))
+                    push!(skip_indices, j)
+                    changed = true
+                    fused = true
+                    break
+                end
+            end
+
+            # Add the original tuple if it wasn't fused and numbers aren't equal
+            if !fused && vec[i][1] != vec[i][2]
+                push!(new_vec, vec[i])
+            end
+        end
+
+        # Update the vector
+        vec = new_vec
+
+        # Break if no changes
+        if !changed
+            break
+        end
+    end
+
+    return vec
+end
+
+function _find_cycles(left_ferms::Vector{Int}, right_ferms::Vector{Int})
+    all_cycles = OPEN_FERMION_CYCLE_T[]
+    for (l, r) in Iterators.zip(left_ferms, right_ferms)
+        push!(all_cycles, (l, r))
+    end
+
+    return reduce_cycles(all_cycles)
+end
+
+# TODO: @memoize this?
+function _open_cycle_helper(left_ferms::Vector{Int}, right_ferms::Vector{Int})
+    result = Set{Vector{OPEN_FERMION_CYCLE_T}}()
+
+    n = min(length(left_ferms), length(right_ferms))
+
+    if (length(left_ferms) == n)
+        for right_ferm_perm in permutations(right_ferms)
+            cycles = _find_cycles(left_ferms, right_ferm_perm[1:n])
+            push!(result, cycles)
+        end
+    else
+        for left_ferm_perm in permutations(left_ferms)
+            cycles = _find_cycles(left_ferm_perm[1:n], right_ferms)
+            push!(result, cycles)
+        end
+    end
+
+    return sort([result...])
+end
+
+"""
+    gen_specific_vp_with_open_cycles
+
+Return a `Vector` of all possible virtual particles with this configuration, i.e., with all possible distinct open cycles.
+"""
+function gen_specific_vp_with_open_cycles(
+    proc::PROC, species::SPECIES, in_contribs::NTuple{I,Bool}, out_contribs::NTuple{O,Bool}
+) where {PROC<:AbstractProcessDefinition,SPECIES<:AbstractParticleType,I,O}
+    # get canonical indices of all participating fermions
+    left_ferms = Int[]
+    right_ferms = Int[]
+    for (contribs, dir) in
+        Iterators.zip((in_contribs, out_contribs), (Incoming(), Outgoing()))
+        c = 0
+        for contrib in contribs
+            c += 1
+            if !contrib
+                continue
+            end
+            (lr, index) = _get_canonical_index(proc, dir, c)
+            if lr == :left
+                push!(left_ferms, index)
+            elseif lr == :right
+                push!(right_ferms, index)
+            end
+        end
+    end
+
+    open_cycles = _open_cycle_helper(left_ferms, right_ferms)
+    return [
+        VirtualParticle(proc, species, in_contribs, out_contribs, open_cycle) for
+        open_cycle in open_cycles
+    ]
+end
+
 # use a small LRU maxsize since these vectors could get large
 @memoize LRU(maxsize=3) function virtual_particles(
     proc::PROC
@@ -863,7 +1101,10 @@ end
             continue
         end
 
-        push!(particles, SPECIFIC_VP(proc, species(), in_contribs, out_contribs))
+        vps = gen_specific_vp_with_open_cycles(proc, species(), in_contribs, out_contribs)
+        for vp in vps
+            push!(particles, vp)
+        end
     end
     return particles
 end

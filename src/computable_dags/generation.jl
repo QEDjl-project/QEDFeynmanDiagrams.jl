@@ -404,51 +404,12 @@ function _get_canonical_index(
 end
 
 """
-    _get_fermion_exchange_number(vp::VirtualParticle)
+    relative_sign(vp::VirtualParticle)
 
-For a given [`VirtualParticle`](@ref), return the number of participating fermion indices minus the number of minimum fermion indices.
-E.g. if the fermions participating are l1, l2, r3 and r4, then 2 pairs are participating, so the minimum indices is 2, but the actual number
-of seen indces is 4, so 4 - 2 = 2 is returned.
-
-The indices themselves are simply canonical indices given to left-side fermions (in-electrons, out-positrons, etc.) and right-side fermions (out-electrons, in-positrons, etc.)
+Returns true if the virtual particle needs a relative sign in the DAG.
 """
-function _get_fermion_exchange_number(vp::VirtualParticle)
-    left_side_ferms = Set{Int}()
-    right_side_ferms = Set{Int}()
-
-    for (contribs, dir) in Iterators.zip(_contributions(vp), (Incoming(), Outgoing()))
-        c = 0
-        for contrib in contribs
-            c += 1
-            if !contrib
-                continue
-            end
-            (lr, index) = _get_canonical_index(process(vp), dir, c)
-            if lr == :left
-                push!(left_side_ferms, index)
-            elseif lr == :right
-                push!(right_side_ferms, index)
-            end
-        end
-    end
-
-    @assert length(left_side_ferms) == length(right_side_ferms) "leftside: $(left_side_ferms), rightside: $right_side_ferms, species: $(particle_species(vp))"
-
-    return length(union(left_side_ferms, right_side_ferms)) - length(left_side_ferms)
-end
-
-"""
-    _negate_vp(vp::VirtualParticle)
-
-!!! warn
-    Rewrite this, we actually multiply 1im
-"""
-function _negate_vp(vp::VirtualParticle)
-    if particle_species(vp) != Photon()
-        return false
-    end
-
-    return isodd(_get_fermion_exchange_number(vp))
+function relative_sign(vp::VirtualParticle)
+    return length(vp.open_cycles) % 2 == 1
 end
 
 """
@@ -469,7 +430,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
     g = DAG()
 
     # -- Base State Tasks --
-    propagated_outputs = Dict{VirtualParticle,Vector{Node}}()
+    propagated_outputs = Dict{SPECIFIC_VP,Vector{Node}}()
     for dir in (Incoming(), Outgoing())
         for species in (Electron(), Positron(), Photon())
             for index in 1:number_particles(proc, dir, species)
@@ -573,7 +534,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
         propagator_node = propagator_task_outputs[product_particle]
 
         for (index, nodes_to_sum) in pair_output_nodes_by_spin_pol
-            negate = _negate_vp(product_particle)
+            negate = relative_sign(product_particle)
 
             compute_pairs_sum = if !negate
                 insert_node!(g, ComputeTask_CollectPairs(length(nodes_to_sum)))
@@ -615,13 +576,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
                 continue
             end
 
-            negate = _negate_vp(ph)
-
-            compute_triples = if !negate
-                insert_node!(g, ComputeTask_Triple())
-            else
-                insert_node!(g, ComputeTask_TripleExchanged())
-            end
+            compute_triples = insert_node!(g, ComputeTask_Triple())
             data_triples = insert_node!(g, DataTask(0))
 
             insert_edge!(g, a, compute_triples, 1) # first argument photons
