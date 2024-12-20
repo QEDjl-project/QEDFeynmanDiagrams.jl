@@ -991,6 +991,68 @@ function reduce_cycles(vec::Vector{OPEN_FERMION_CYCLE_T})
     return vec
 end
 
+function _count_closed_cycles(vec::Vector{OPEN_FERMION_CYCLE_T})
+    closed_count = 0
+    # Adapted from reduce_cycles
+    while true
+        # Flag to check if changes occur
+        changed = false
+        new_vec = OPEN_FERMION_CYCLE_T[]
+        skip_indices = Set{Int}()
+
+        for i in 1:length(vec)
+            if i in skip_indices
+                continue
+            end
+
+            fused = false
+            for j in (i + 1):length(vec)
+                if j in skip_indices
+                    continue
+                end
+
+                a, b = vec[i]
+                c, d = vec[j]
+
+                # Fuse if b == c
+                if b == c
+                    push!(new_vec, (a, d))
+                    push!(skip_indices, j)
+                    changed = true
+                    fused = true
+                    break
+                    # Fuse if d == a
+                elseif d == a
+                    push!(new_vec, (c, b))
+                    push!(skip_indices, j)
+                    changed = true
+                    fused = true
+                    break
+                end
+            end
+
+            # Add the original tuple if it wasn't fused and numbers aren't equal
+            if !fused
+                if vec[i][1] == vec[i][2]
+                    closed_count += 1   # only here do we actually close a cycle
+                else
+                    push!(new_vec, vec[i])
+                end
+            end
+        end
+
+        # Update the vector
+        vec = new_vec
+
+        # Break if no changes
+        if !changed
+            break
+        end
+    end
+
+    return closed_count
+end
+
 function _find_cycles(left_ferms::Vector{Int}, right_ferms::Vector{Int})
     all_cycles = OPEN_FERMION_CYCLE_T[]
     for (l, r) in Iterators.zip(left_ferms, right_ferms)

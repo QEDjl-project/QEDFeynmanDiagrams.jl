@@ -414,16 +414,36 @@ function relative_sign_pair(p1::VirtualParticle, p2::VirtualParticle)
         return false
     end
 
-    (s1, n1) = _canonical_index(p1)
-    (s2, n2) = _canonical_index(p2)
+    local vec::Vector{OPEN_FERMION_CYCLE_T}
 
-    new_cycle = if (s1 == :left && s2 == :right)
-        (n1, n2)
-    elseif (s1 == :right && s2 == :left)
-        (n2, n1)
-    else
-        @assert false
+    (l, el) = if p1.species == Electron
+        _canonical_index(p1)
+    elseif p2.species == Electron
+        _canonical_index(p2)
     end
+    (r, po) = if p1.species == Positron
+        _canonical_index(p1)
+    elseif p2.species == Positron
+        _canonical_index(p2)
+    end
+
+    vec = [p1.open_cycles..., p2.open_cycles..., (el, po)]
+
+    n = _count_closed_cycles(vec)
+
+    return n % 2 == 1
+end
+
+"""
+    relative_sign_triple(p2::VirtualParticle, p3::VirtualParticle, p3::VirtualParticle)
+
+Returns true if the Triple task combining electron p1, and positron p2 into a full diagram family needs a relative sign in the DAG.
+"""
+function relative_sign_triple(p1::VirtualParticle, p2::VirtualParticle, p3::VirtualParticle)
+    # p1 + p2 is the photon
+    n1 = relative_sign_pair(p1, p2)
+
+    new_cycle = (_canonical_index(p1)[2], _canonical_index(p2)[2])
 
     res = VirtualParticle(
         p1.proc,
@@ -436,57 +456,14 @@ function relative_sign_pair(p1::VirtualParticle, p2::VirtualParticle)
         ),
     )
 
-    @assert make_up(p1, p2, res) "$p1 + $p2 - $res"
+    # cycles closed?
+    closed_cycle_count = _count_closed_cycles(
+        OPEN_FERMION_CYCLE_T[p3.open_cycles..., res.open_cycles...]
+    )
 
-    n_before = length(p1.open_cycles) + length(p2.open_cycles)
-    n_after = length(res.open_cycles)
+    n2 = closed_cycle_count % 2 == 1
 
-    if sort([p1.open_cycles..., p2.open_cycles...]) == res.open_cycles
-        # no change in the cycles, so the two new fermion/antifermions match up and close their cycle -> negate
-        @info "1 P [TRUE] $p1 + $p2 - $res"
-        return true
-    elseif n_before - 1 == n_after
-        # one cycle removed -> negate
-        @info "2 P [TRUE] $p1 + $p2 - $res"
-        return true
-    elseif n_before - 2 == n_after
-        # one cycle removed -> negate
-        @info "2 P [TRUE] $p1 + $p2 - $res"
-        return true
-    elseif n_before + 1 == n_after
-        # one cycle opened -> no negation
-        @info "3 P [FALS] $p1 + $p2 - $res"
-        return false
-    else
-        # number of cycles not changed but cycle itself changed -> no negation
-        @info "4 P [FALS] $p1 + $p2 - $res"
-        @assert n_before == n_after
-        return false
-    end
-end
-
-"""
-    relative_sign_triple(p1::VirtualParticle, p2::VirtualParticle, p3::VirtualParticle)
-
-Returns true if the Triple task combining p1, p2 and p3 into a full diagram family needs a relative sign in the DAG.
-"""
-function relative_sign_triple(p1::VirtualParticle, p2::VirtualParticle, p3::VirtualParticle)
-    # p1 is the photon, p2 + p3 is the "inverse" photon, question is whether p2 and p3 close a cycle
-    n1 = relative_sign_pair(p2, p3)
-
-    # cycle closed? -> negate
-    n2 = length(p1.open_cycles) == 1
-    if n2
-        #@info "  T [TRUE] $p1 + $p2 + $p3"
-    else
-        #@info "  T [FALS] $p1 + $p2 + $p3"
-    end
-
-    if n1 != n2 # xor
-        return true
-    else
-        return false
-    end
+    return n1 != n2 # xor
 end
 
 """
@@ -654,7 +631,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
                 continue
             end
 
-            negate = relative_sign_triple(ph, el, po)
+            negate = relative_sign_triple(el, po, ph)
 
             compute_triples = if negate
                 insert_node!(g, ComputeTask_TripleNegated())

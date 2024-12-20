@@ -19,7 +19,7 @@ end
 import ComputableDAGs: compute, compute_effort, children
 
 const e = sqrt(4π / 137.035999177)
-const VERTEX = 1#-1im * e * gamma()
+const VERTEX = -1im * e * gamma()
 
 compute_effort(::ComputeTask_BaseState) = 0
 compute_effort(::ComputeTask_Propagator) = 0
@@ -63,8 +63,7 @@ function compute(
     )
     return Propagated( # "propagated" because it goes directly into the next pair
         species,
-        1,
-        #state,
+        state,
         # bispinor, adjointbispinor, or lorentzvector
     )
 end
@@ -101,8 +100,7 @@ function compute(
     vp_mom = _vp_momentum(input.vp, input.psp)
     vp_species = particle_species(input.vp)
     inner = QEDbase.propagator(vp_species, vp_mom)
-    return 1
-    #return inner
+    return inner
 end
 
 struct Unpropagated{PARTICLE_T<:AbstractParticleType,VALUE_T}
@@ -190,8 +188,8 @@ function compute(::ComputeTask_CollectPairs, args::Vararg{N,T}) where {N,T}
     return sum(args)
 end
 function compute(::ComputeTask_CollectTriples, args::Vararg{N,T}) where {N,T}
-    println("$([args...])")
-    println("$(sum(args))")
+    #println("$([args...])")
+    #println("$(sum(args))")
     return sum(args)
 end
 function compute(::ComputeTask_SpinPolCumulation, args::Vararg{N,T}) where {N,T}
