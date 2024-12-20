@@ -147,32 +147,10 @@ end
     return Unpropagated(Photon(), positron.value * VERTEX * electron.value)  # electron - positron -> photon
 end
 
-@inline function compute( # photon, electron
-    ::ComputeTask_PairNegated,
-    photon::Propagated{Photon},
-    electron::Propagated{Electron},
-)
-    res = -1 * photon.value * VERTEX * electron.value
-    @info "$(res == 1 ? "POS" : "NEG")"
-    return Unpropagated(Electron(), res) # photon - electron -> electron
-end
-@inline function compute( # photon, positron
-    ::ComputeTask_PairNegated,
-    photon::Propagated{Photon},
-    positron::Propagated{Positron},
-)
-    res = -1 * positron.value * VERTEX * photon.value
-    @info "$(res == 1 ? "POS" : "NEG")"
-    return Unpropagated(Positron(), res) # photon - positron -> positron
-end
-@inline function compute( # electron, positron
-    ::ComputeTask_PairNegated,
-    electron::Propagated{Electron},
-    positron::Propagated{Positron},
-)
-    res = -1 * positron.value * VERTEX * electron.value
-    @info "$(res == 1 ? "POS" : "NEG")"
-    return Unpropagated(Photon(), res)  # electron - positron -> photon
+@inline function compute(
+    ::ComputeTask_PairNegated, v1::Propagated{P1}, v2::Propagated{P2}
+) where {P1,P2}
+    return -1 * compute(ComputeTask_Pair(), v1, v2)
 end
 
 @inline function compute(::ComputeTask_PropagatePairs, prop, photon::Unpropagated{Photon})
@@ -195,9 +173,7 @@ end
     electron::Propagated{Electron},
     positron::Propagated{Positron},
 )
-    res = positron.value * (VERTEX * photon.value) * electron.value
-    @info "$(res == 1 ? "POS" : "NEG")"
-    return res
+    return positron.value * (VERTEX * photon.value) * electron.value
 end
 @inline function compute(
     ::ComputeTask_TripleNegated,
@@ -205,9 +181,7 @@ end
     electron::Propagated{Electron},
     positron::Propagated{Positron},
 )
-    res = -1 * positron.value * (VERTEX * photon.value) * electron.value
-    @info "$(res == 1 ? "POS" : "NEG")"
-    return res
+    return -1 * positron.value * (VERTEX * photon.value) * electron.value
 end
 
 # this compiles in a reasonable amount of time for up to about 1e4 parameters

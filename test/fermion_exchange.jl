@@ -67,9 +67,6 @@ end
     for i in 1:10
         input = gen_process_input(RNG, bhabha)
 
-        # println("gt1 : $(_ground_truth_bhabha(input))")
-        # println("gt2 : $(_ground_truth_bhabha_test(input))\n")
-
         @test isapprox(f(input), _ground_truth_bhabha(input))
     end
 end

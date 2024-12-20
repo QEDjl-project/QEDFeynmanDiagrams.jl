@@ -498,7 +498,7 @@ function make_up(
         reduce_cycles(OPEN_FERMION_CYCLE_T[a.open_cycles..., b.open_cycles...])
     end
 
-    if cycles != c.open_cycles
+    if sort(cycles) != c.open_cycles
         return false
     end
 
@@ -520,15 +520,29 @@ function are_total(
         end
     end
 
-    #=reduced_cycles = reduce_cycles(
-        OPEN_FERMION_CYCLE_T[a.open_cycles..., b.open_cycles..., c.open_cycles...]
+    (l, el) = if a.species == Electron
+        _canonical_index(a)
+    elseif b.species == Electron
+        _canonical_index(b)
+    else
+        _canonical_index(c)
+    end
+    (r, po) = if a.species == Positron
+        _canonical_index(a)
+    elseif b.species == Positron
+        _canonical_index(b)
+    else
+        _canonical_index(c)
+    end
+
+    reduced_cycles = reduce_cycles(
+        OPEN_FERMION_CYCLE_T[a.open_cycles..., b.open_cycles..., c.open_cycles..., (el, po)]
     )
     # if the combination is total, there cannot be any leftover open cycles
     if reduced_cycles != OPEN_FERMION_CYCLE_T[]
-        @info "rejected total because leftover cycles: $reduced_cycles\n$a\n$b\n$c"
+        @warn "rejected!"
         return false
     end
-    =#
 
     return true
 end

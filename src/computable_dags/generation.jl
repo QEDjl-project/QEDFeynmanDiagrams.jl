@@ -404,21 +404,40 @@ function _get_canonical_index(
 end
 
 """
-    relative_sign_pair(p1::VirtualParticle, p2::VirtualParticle, res::VirtualParticle)
+    relative_sign_pair(p1::VirtualParticle, p2::VirtualParticle)
 
 Returns true if the Pair task combining p1 and p2 into res needs a relative sign in the DAG.
 """
-function relative_sign_pair(p1::VirtualParticle, p2::VirtualParticle, res::VirtualParticle)
-    if (res.species != Photon)
+function relative_sign_pair(p1::VirtualParticle, p2::VirtualParticle)
+    if (p1.species == Photon || p2.species == Photon)
         #@info "P [FALS] relative sign of $p1 + $p2 -> $res"
         return false
     end
 
-    if !make_up(p1, p2, res)
-        @info "FLIPPING: $p1 + $p2 - $res"
-        res = _invert(res)
+    (s1, n1) = _canonical_index(p1)
+    (s2, n2) = _canonical_index(p2)
+
+    new_cycle = if (s1 == :left && s2 == :right)
+        (n1, n2)
+    elseif (s1 == :right && s2 == :left)
+        (n2, n1)
+    else
+        @assert false
     end
+
+    res = VirtualParticle(
+        p1.proc,
+        Photon(),
+        (_contributions(p1) + _contributions(p2))...,
+        sort(
+            reduce_cycles(
+                OPEN_FERMION_CYCLE_T[p1.open_cycles..., p2.open_cycles..., new_cycle]
+            ),
+        ),
+    )
+
     @assert make_up(p1, p2, res) "$p1 + $p2 - $res"
+
     n_before = length(p1.open_cycles) + length(p2.open_cycles)
     n_after = length(res.open_cycles)
 
@@ -430,6 +449,10 @@ function relative_sign_pair(p1::VirtualParticle, p2::VirtualParticle, res::Virtu
         # one cycle removed -> negate
         @info "2 P [TRUE] $p1 + $p2 - $res"
         return true
+    elseif n_before - 2 == n_after
+        # one cycle removed -> negate
+        @info "2 P [TRUE] $p1 + $p2 - $res"
+        return true
     elseif n_before + 1 == n_after
         # one cycle opened -> no negation
         @info "3 P [FALS] $p1 + $p2 - $res"
@@ -437,6 +460,7 @@ function relative_sign_pair(p1::VirtualParticle, p2::VirtualParticle, res::Virtu
     else
         # number of cycles not changed but cycle itself changed -> no negation
         @info "4 P [FALS] $p1 + $p2 - $res"
+        @assert n_before == n_after
         return false
     end
 end
@@ -448,17 +472,17 @@ Returns true if the Triple task combining p1, p2 and p3 into a full diagram fami
 """
 function relative_sign_triple(p1::VirtualParticle, p2::VirtualParticle, p3::VirtualParticle)
     # p1 is the photon, p2 + p3 is the "inverse" photon, question is whether p2 and p3 close a cycle
-    n1 = relative_sign_pair(p2, p3, p1)
+    n1 = relative_sign_pair(p2, p3)
 
     # cycle closed? -> negate
     n2 = length(p1.open_cycles) == 1
     if n2
-        @info "  T [TRUE] $p1 + $p2 + $p3"
+        #@info "  T [TRUE] $p1 + $p2 + $p3"
     else
-        @info "  T [FALS] $p1 + $p2 + $p3"
+        #@info "  T [FALS] $p1 + $p2 + $p3"
     end
 
-    if n1 != n2
+    if n1 != n2 # xor
         return true
     else
         return false
@@ -542,14 +566,6 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
     for (product_particle, input_particle_vector) in pairs
         propagated_outputs[product_particle] = Vector{Node}()
 
-        #=
-        @info "$product_particle => "
-        for ip in input_particle_vector
-            @info "$ip"
-        end
-        @info "would $(relative_sign(product_particle) ? "be" : "not be") negated"
-        =#
-
         # make a dictionary of vectors to collect the outputs depending on spin/pol configs of the input particles
         N = _number_contributions(product_particle)
         pair_output_nodes_by_spin_pol = Dict{
@@ -573,9 +589,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
                 end
 
                 # make the compute pair nodes for every combination of the found input_particle_nodes to get all spin/pol combinations
-                negate = relative_sign_pair(
-                    input_particles[1], input_particles[2], product_particle
-                )
+                negate = relative_sign_pair(input_particles[1], input_particles[2])
 
                 compute_pair = if negate
                     insert_node!(g, ComputeTask_PairNegated())
@@ -643,10 +657,8 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
             negate = relative_sign_triple(ph, el, po)
 
             compute_triples = if negate
-                println("negating")
                 insert_node!(g, ComputeTask_TripleNegated())
             else
-                println("not negating")
                 insert_node!(g, ComputeTask_Triple())
             end
             data_triples = insert_node!(g, DataTask(0))
