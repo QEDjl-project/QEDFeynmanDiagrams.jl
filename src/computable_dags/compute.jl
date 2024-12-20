@@ -1,15 +1,13 @@
 struct ComputeTask_BaseState <: AbstractComputeTask end             # calculate the base state of an external particle
 struct ComputeTask_Propagator <: AbstractComputeTask end            # calculate the propagator term of a virtual particle
 struct ComputeTask_Pair <: AbstractComputeTask end                  # from a pair of virtual particle currents, calculate the product
+struct ComputeTask_PairNegated <: AbstractComputeTask end           # same as Pair, but multiplies the result by -1
 struct ComputeTask_CollectPairs <: AbstractComputeTask              # for a list of virtual particle current pair products, sum
     children::Int
 end
-struct ComputeTask_CollectPairsExchanged <: AbstractComputeTask     # same as CollectPairs, but multiplies the result by 1im before returning
-    children::Int                                                   # this should be done using graph-gen-time known arguments once those are in ComputableDAGs
-end
-
 struct ComputeTask_PropagatePairs <: AbstractComputeTask end        # for the result of a CollectPairs compute task and a propagator, propagate the sum
 struct ComputeTask_Triple <: AbstractComputeTask end                # from a triple of virtual particle currents, calculate the diagram result
+struct ComputeTask_TripleNegated <: AbstractComputeTask end           # same as Triple, but multiplies the result by -1
 struct ComputeTask_CollectTriples <: AbstractComputeTask            # sum over triples results and 
     children::Int
 end
@@ -21,25 +19,27 @@ end
 import ComputableDAGs: compute, compute_effort, children
 
 const e = sqrt(4π / 137.035999177)
-const VERTEX = -1im * e * gamma()
+const VERTEX = 1#-1im * e * gamma()
 
 compute_effort(::ComputeTask_BaseState) = 0
 compute_effort(::ComputeTask_Propagator) = 0
 compute_effort(::ComputeTask_Pair) = 0
+compute_effort(::ComputeTask_PairNegated) = 0
 compute_effort(::ComputeTask_CollectPairs) = 0
-compute_effort(::ComputeTask_CollectPairsExchanged) = 0
 compute_effort(::ComputeTask_PropagatePairs) = 0
 compute_effort(::ComputeTask_Triple) = 0
+compute_effort(::ComputeTask_TripleNegated) = 0
 compute_effort(::ComputeTask_CollectTriples) = 0
 compute_effort(::ComputeTask_SpinPolCumulation) = 0
 
 children(::ComputeTask_BaseState) = 1
 children(::ComputeTask_Propagator) = 1
 children(::ComputeTask_Pair) = 2
+children(::ComputeTask_PairNegated) = 2
 children(t::ComputeTask_CollectPairs) = t.children
-children(t::ComputeTask_CollectPairsExchanged) = t.children
 children(::ComputeTask_PropagatePairs) = 2
 children(::ComputeTask_Triple) = 3
+children(::ComputeTask_TripleNegated) = 3
 children(t::ComputeTask_CollectTriples) = t.children
 children(t::ComputeTask_SpinPolCumulation) = t.children
 
@@ -63,7 +63,8 @@ function compute(
     )
     return Propagated( # "propagated" because it goes directly into the next pair
         species,
-        state,
+        1,
+        #state,
         # bispinor, adjointbispinor, or lorentzvector
     )
 end
@@ -100,7 +101,8 @@ function compute(
     vp_mom = _vp_momentum(input.vp, input.psp)
     vp_species = particle_species(input.vp)
     inner = QEDbase.propagator(vp_species, vp_mom)
-    return inner
+    return 1
+    #return inner
 end
 
 struct Unpropagated{PARTICLE_T<:AbstractParticleType,VALUE_T}
@@ -145,6 +147,34 @@ end
     return Unpropagated(Photon(), positron.value * VERTEX * electron.value)  # electron - positron -> photon
 end
 
+@inline function compute( # photon, electron
+    ::ComputeTask_PairNegated,
+    photon::Propagated{Photon},
+    electron::Propagated{Electron},
+)
+    res = -1 * photon.value * VERTEX * electron.value
+    @info "$(res == 1 ? "POS" : "NEG")"
+    return Unpropagated(Electron(), res) # photon - electron -> electron
+end
+@inline function compute( # photon, positron
+    ::ComputeTask_PairNegated,
+    photon::Propagated{Photon},
+    positron::Propagated{Positron},
+)
+    res = -1 * positron.value * VERTEX * photon.value
+    @info "$(res == 1 ? "POS" : "NEG")"
+    return Unpropagated(Positron(), res) # photon - positron -> positron
+end
+@inline function compute( # electron, positron
+    ::ComputeTask_PairNegated,
+    electron::Propagated{Electron},
+    positron::Propagated{Positron},
+)
+    res = -1 * positron.value * VERTEX * electron.value
+    @info "$(res == 1 ? "POS" : "NEG")"
+    return Unpropagated(Photon(), res)  # electron - positron -> photon
+end
+
 @inline function compute(::ComputeTask_PropagatePairs, prop, photon::Unpropagated{Photon})
     return Propagated(Photon(), photon.value * prop)
 end
@@ -165,18 +195,29 @@ end
     electron::Propagated{Electron},
     positron::Propagated{Positron},
 )
-    return positron.value * (VERTEX * photon.value) * electron.value
+    res = positron.value * (VERTEX * photon.value) * electron.value
+    @info "$(res == 1 ? "POS" : "NEG")"
+    return res
+end
+@inline function compute(
+    ::ComputeTask_TripleNegated,
+    photon::Propagated{Photon},
+    electron::Propagated{Electron},
+    positron::Propagated{Positron},
+)
+    res = -1 * positron.value * (VERTEX * photon.value) * electron.value
+    @info "$(res == 1 ? "POS" : "NEG")"
+    return res
 end
 
 # this compiles in a reasonable amount of time for up to about 1e4 parameters
 # TODO: use a summation algorithm with more accuracy and/or parallelization
-@inline function compute(::ComputeTask_CollectPairs, args::Vararg{N,T}) where {N,T}
+function compute(::ComputeTask_CollectPairs, args::Vararg{N,T}) where {N,T}
     return sum(args)
 end
-@inline function compute(::ComputeTask_CollectPairsExchanged, args::Vararg{N,T}) where {N,T}
-    return -1 * sum(args)
-end
-@inline function compute(::ComputeTask_CollectTriples, args::Vararg{N,T}) where {N,T}
+function compute(::ComputeTask_CollectTriples, args::Vararg{N,T}) where {N,T}
+    println("$([args...])")
+    println("$(sum(args))")
     return sum(args)
 end
 function compute(::ComputeTask_SpinPolCumulation, args::Vararg{N,T}) where {N,T}

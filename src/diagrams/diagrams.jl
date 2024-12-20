@@ -148,17 +148,18 @@ function _canonical_fermion_indices(vp::VP) where {VP<:VirtualParticle}
 end
 
 function _canonical_index(vp::VP) where {VP<:VirtualParticle}
-    @assert vp.species != Photon() "canonical index is only for (anti-)fermions"
+    @assert vp.species != Photon "canonical index is only for (anti-)fermions"
     (left_ferms, right_ferms) = _canonical_fermion_indices(vp)
 
     # remove stuff
     for cycle in vp.open_cycles
-        delete!(left_ferms, cycle[1])
-        delete!(right_ferms, cycle[2])
+        filter!(x -> x != cycle[1], left_ferms)
+        filter!(x -> x != cycle[2], right_ferms)
     end
 
     left_minus_right = [setdiff(Set(left_ferms), Set(right_ferms))...]
     right_minus_left = [setdiff(Set(right_ferms), Set(left_ferms))...]
+
     if length(left_minus_right) == 1
         @assert isempty(right_minus_left)
         return (:left, left_minus_right[begin])
@@ -174,7 +175,7 @@ function Base.show(io::IO, vp::VirtualParticle)
     pr = x -> x ? "1" : "0"
     return print(
         io,
-        "$(particle_species(vp)): \t$(*(pr.(vp.in_particle_contributions)...)) | $(*(pr.(vp.out_particle_contributions)...)) | $(vp.open_cycles)",
+        "$(string(particle_species(vp))[1:3]): $(*(pr.(vp.in_particle_contributions)...)) | $(*(pr.(vp.out_particle_contributions)...)) | $(isempty(vp.open_cycles) ? "[      ]" : "$(vp.open_cycles)")",
     )
 end
 
@@ -231,12 +232,15 @@ end
 function _invert(virtual_particle::VirtualParticle)
     I = length(virtual_particle.in_particle_contributions)
     O = length(virtual_particle.out_particle_contributions)
+
+    new_cycles = sort([(cycle[2], cycle[1]) for cycle in virtual_particle.open_cycles])
+
     return VirtualParticle(
         virtual_particle.proc,
         _invert(particle_species(virtual_particle)),
         ntuple(x -> !virtual_particle.in_particle_contributions[x], I),
         ntuple(x -> !virtual_particle.out_particle_contributions[x], O),
-        virtual_particle.open_cycles,
+        new_cycles,
     )
 end
 
@@ -477,20 +481,23 @@ function make_up(
         return false
     end
 
-    (s1, n1) = _canonical_index(a)
-    (s2, n2) = _canonical_index(b)
+    cycles = if a.species != Photon && b.species != Photon
+        (s1, n1) = _canonical_index(a)
+        (s2, n2) = _canonical_index(b)
 
-    new_cycle = if (s1 == :left && s2 == :right)
-        (n1, n2)
-    elseif (s1 == :right && s2 == :left)
-        (n2, n1)
+        new_cycle = if (s1 == :left && s2 == :right)
+            (n1, n2)
+        elseif (s1 == :right && s2 == :left)
+            (n2, n1)
+        else
+            @assert false
+        end
+
+        reduce_cycles(OPEN_FERMION_CYCLE_T[a.open_cycles..., b.open_cycles..., new_cycle])
     else
-        @assert false
+        reduce_cycles(OPEN_FERMION_CYCLE_T[a.open_cycles..., b.open_cycles...])
     end
 
-    cycles = reduce_cycles(
-        OPEN_FERMION_CYCLE_T[a.open_cycles..., b.open_cycles..., new_cycle]
-    )
     if cycles != c.open_cycles
         return false
     end
