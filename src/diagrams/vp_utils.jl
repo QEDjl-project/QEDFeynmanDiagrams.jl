@@ -17,7 +17,7 @@ end
 """
     contains(a::VirtualParticle, b::VirtualParticle)
 
-Returns true if the set of particles contributing to `a` are contains the set of particles contributing to `b`.
+Returns true if the set of particles contributing to `a` contains the set of particles contributing to `b`.
 """
 function contains(a::VirtualParticle, b::VirtualParticle)
     for (a_contrib, b_contrib) in
@@ -33,7 +33,7 @@ end
 """
     are_total(a::VirtualParticle, b::VirtualParticle, c::VirtualParticle)
 
-Return true if a, b and c combined contain all external particles exactly once.
+Return true if `a`, `b` and `c` combined contain all external particles exactly once and no open cycles remain.
 """
 function are_total(
     a::VirtualParticle{PROC}, b::VirtualParticle{PROC}, c::VirtualParticle{PROC}
@@ -65,7 +65,6 @@ function are_total(
     )
     # if the combination is total, there cannot be any leftover open cycles
     if reduced_cycles != OPEN_FERMION_CYCLE_T[]
-        @warn "rejected!"
         return false
     end
 

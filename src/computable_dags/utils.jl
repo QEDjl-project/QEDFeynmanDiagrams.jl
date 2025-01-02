@@ -51,21 +51,6 @@ function _invert(::AbstractParticleType)
     throw(InvalidInputError("unimplemented for this particle type"))
 end
 
-function _invert(virtual_particle::VirtualParticle)
-    I = length(virtual_particle.in_particle_contributions)
-    O = length(virtual_particle.out_particle_contributions)
-
-    new_cycles = sort([(cycle[2], cycle[1]) for cycle in virtual_particle.open_cycles])
-
-    return VirtualParticle(
-        virtual_particle.proc,
-        _invert(particle_species(virtual_particle)),
-        ntuple(x -> !virtual_particle.in_particle_contributions[x], I),
-        ntuple(x -> !virtual_particle.out_particle_contributions[x], O),
-        new_cycles,
-    )
-end
-
 Base.isless(::ParticleDirection, ::ParticleDirection) = false
 Base.isless(::Incoming, ::Outgoing) = true
 Base.isless(::UnknownDirection, ::Incoming) = true

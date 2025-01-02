@@ -3,16 +3,21 @@ const OPEN_FERMION_CYCLE_T = Tuple{Int64,Int64}
 """
     VirtualParticle{
         PROC<:AbstractProcessDefinition,
-        NTuple{I,Bool},
-        NTuple{O,Bool},
+        IT<:NTuple,
+        OT<:NTuple,
     }
 
 Representation of a virtual particle and the return type of the [`virtual_particles`](@ref) function.
 The type parameters are:
-- PROC: The process this particle is a process of.
-- PT: The particle type of this virtual particle, e.g. [`QEDcore.Photon`](@extref) or [`QEDcore.Electron`](@extref).
-- I: NTuple of Bools with the incoming momentum contributions
-- O: NTuple of Bools with the outgoing momentum contributions
+- PROC: The process this particle is a part of.
+- IT: `NTuple` of `Bool`s with the incoming momentum contributions.
+- OT: `NTuple` of `Bool`s with the outgoing momentum contributions.
+
+A virtual particle contains the information about the process it's a part of, its particle species,
+the in- and outgoing particles of the process that contribute to its momentum, and its open fermion cycles.
+The open cycles are in the context of fermion permutations. For `n` fermion lines in a process, there 
+can be between 1 (like 1-2, 2-3, 3-1) and n (like 1-1, 2-2, 3-3) cycles, where the left number represents
+the canonical fermion index and the right number the canonical antifermion index.
 """
 struct VirtualParticle{PROC<:AbstractProcessDefinition,IT<:NTuple,OT<:NTuple}
     proc::PROC
@@ -20,9 +25,6 @@ struct VirtualParticle{PROC<:AbstractProcessDefinition,IT<:NTuple,OT<:NTuple}
     in_particle_contributions::IT
     out_particle_contributions::OT
 
-    # open cycles in the context of fermion permutations
-    # for n fermion lines in a process, there can be between 1 (like 1-2, 2-3, 3-1) and n (like 1-1, 2-2, 3-3) cycles
-    # where the left number represents the canonical fermion index and the right number the canonical antifermion index
     open_cycles::Vector{OPEN_FERMION_CYCLE_T}
 
     function VirtualParticle(
