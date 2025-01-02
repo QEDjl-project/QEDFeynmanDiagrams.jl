@@ -1,15 +1,3 @@
-_construction_string(::Incoming) = "Incoming()"
-_construction_string(::Outgoing) = "Outgoing()"
-
-_construction_string(::Electron) = "Electron()"
-_construction_string(::Positron) = "Positron()"
-_construction_string(::Photon) = "Photon()"
-
-_construction_string(::PolX) = "PolX()"
-_construction_string(::PolY) = "PolY()"
-_construction_string(::SpinUp) = "SpinUp()"
-_construction_string(::SpinDown) = "SpinDown()"
-
 function _parse_particle(name::String)
     local dir
     if startswith(name, "inc_")
@@ -108,7 +96,7 @@ function ComputableDAGs.input_expr(
 
         vp = virtual_particles(proc)[index]
         return Meta.parse("QEDFeynmanDiagrams.PropagatorInput(
-                              VirtualParticle(
+                              QEDFeynmanDiagrams.VirtualParticle(
                                 process($psp_symbol),
                                 $(_construction_string(particle_species(vp))),
                                 $(vp.in_particle_contributions),
@@ -146,15 +134,6 @@ function ComputableDAGs.input_type(p::AbstractProcessDefinition)
     }
 end
 
-_species_str(::Photon) = "ph"
-_species_str(::Electron) = "el"
-_species_str(::Positron) = "po"
-
-_spin_pol_str(::SpinUp) = "su"
-_spin_pol_str(::SpinDown) = "sd"
-_spin_pol_str(::PolX) = "px"
-_spin_pol_str(::PolY) = "py"
-
 function Base.parse(::Type{AbstractSpinOrPolarization}, s::AbstractString)
     if s == "su"
         return SpinUp()
@@ -169,65 +148,6 @@ function Base.parse(::Type{AbstractSpinOrPolarization}, s::AbstractString)
         return PolY()
     end
     throw(InvalidInputError("invalid string \"$s\" to parse to AbstractSpinOrPolarization"))
-end
-
-_dir_str(::Incoming) = "inc"
-_dir_str(::Outgoing) = "out"
-
-# the possible spins or pols for generating base state tasks
-_spin_pols(::AllSpin) = (SpinUp(), SpinDown())
-_spin_pols(::SyncedSpin) = (SpinUp(), SpinDown())
-_spin_pols(::SpinUp) = (SpinUp(),)
-_spin_pols(::SpinDown) = (SpinDown(),)
-
-_spin_pols(::AllPol) = (PolX(), PolY())
-_spin_pols(::SyncedPol) = (PolX(), PolY())
-_spin_pols(::PolX) = (PolX(),)
-_spin_pols(::PolY) = (PolY(),)
-
-_is_external(p::VirtualParticle) = _number_contributions(p) == 1
-
-function _total_index(
-    proc::AbstractProcessDefinition,
-    dir::ParticleDirection,
-    species::AbstractParticleType,
-    n::Int,
-)
-    # find particle index of all particles given n-th particle of dir and species (inverse of _species_index)
-    total_index = 0
-    species_count = 0
-    for p in particles(proc, dir)
-        total_index += 1
-        if species == p
-            species_count += 1
-        end
-        if species_count == n
-            return if dir == Incoming()
-                total_index
-            else
-                number_incoming_particles(proc) + total_index
-            end
-        end
-    end
-
-    throw("did not find $n-th $dir $species")
-end
-
-function _species_index(
-    proc::AbstractProcessDefinition,
-    dir::ParticleDirection,
-    species::AbstractParticleType,
-    n::Int,
-)
-    # find particle index of n-th particle of *this species and dir*
-    species_index = 0
-    for i in 1:n
-        if particles(proc, dir)[i] == species
-            species_index += 1
-        end
-    end
-
-    return species_index
 end
 
 function _base_state_name(p::VirtualParticle)
@@ -316,12 +236,6 @@ function _make_node_name(spin_pols::Vector)
     return node_name
 end
 
-# return an index for the argument ordering on edges in the DAG for a given particle species, photon -> 1, electron -> 2, positron -> 3
-_edge_index_from_species(::Photon) = 1
-_edge_index_from_species(::Electron) = 2
-_edge_index_from_species(::Positron) = 3
-_edge_index_from_vp(vp::VirtualParticle) = _edge_index_from_species(particle_species(vp))
-
 """
     _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tuple)
 
@@ -375,7 +289,7 @@ function _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tup
 end
 
 """
-    ComputableDAGs.graph(proc::AbstractProcessDefinition)
+    graph(proc::AbstractProcessDefinition)
 
 Generate and return a [`ComputableDAGs.DAG`](@extref), representing the computation for the squared matrix element of this scattering process, summed over spin and polarization combinations allowed by the process.
 """
@@ -392,7 +306,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
     g = DAG()
 
     # -- Base State Tasks --
-    propagated_outputs = Dict{VirtualParticle,Vector{Node}}()
+    propagated_outputs = Dict{SPECIFIC_VP,Vector{Node}}()
     for dir in (Incoming(), Outgoing())
         for species in (Electron(), Positron(), Photon())
             for index in 1:number_particles(proc, dir, species)
@@ -474,8 +388,13 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
                 end
 
                 # make the compute pair nodes for every combination of the found input_particle_nodes to get all spin/pol combinations
+                negate = relative_sign_pair(input_particles[1], input_particles[2])
 
-                compute_pair = insert_node!(g, ComputeTask_Pair())
+                compute_pair = if negate
+                    insert_node!(g, ComputeTask_PairNegated())
+                else
+                    insert_node!(g, ComputeTask_Pair())
+                end
                 pair_data_out = insert_node!(g, DataTask(0))
 
                 insert_edge!(
@@ -499,13 +418,14 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
             compute_pairs_sum = insert_node!(
                 g, ComputeTask_CollectPairs(length(nodes_to_sum))
             )
+
             data_pairs_sum = insert_node!(g, DataTask(0))
             compute_propagated = insert_node!(g, ComputeTask_PropagatePairs())
             # give this out node the correct name
             data_out_propagated = insert_node!(g, DataTask(0), _make_node_name([index...]))
 
             for node in nodes_to_sum
-                insert_edge!(g, node, compute_pairs_sum)
+                insert_edge!(g, node, compute_pairs_sum, 2)
             end
 
             insert_edge!(g, compute_pairs_sum, data_pairs_sum)
@@ -533,12 +453,18 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
                 continue
             end
 
-            compute_triples = insert_node!(g, ComputeTask_Triple())
+            negate = relative_sign_triple(el, po, ph)
+
+            compute_triples = if negate
+                insert_node!(g, ComputeTask_TripleNegated())
+            else
+                insert_node!(g, ComputeTask_Triple())
+            end
             data_triples = insert_node!(g, DataTask(0))
 
-            insert_edge!(g, a, compute_triples, 1) # first argument photons
-            insert_edge!(g, b, compute_triples, 2) # second argument electrons
-            insert_edge!(g, c, compute_triples, 3) # third argument positrons
+            insert_edge!(g, a, compute_triples, _edge_index_from_species(Photon())) # first argument photons
+            insert_edge!(g, b, compute_triples, _edge_index_from_species(Electron())) # second argument electrons
+            insert_edge!(g, c, compute_triples, _edge_index_from_species(Positron())) # third argument positrons
 
             insert_edge!(g, compute_triples, data_triples)
 
