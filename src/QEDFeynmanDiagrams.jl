@@ -16,11 +16,15 @@ export external_particles, virtual_particles, process, graph
 
 include("flat_matrix.jl")
 
+include("diagrams/virtual_particle.jl")
 include("diagrams/labelled_plane_trees.jl")
 include("diagrams/interface.jl")
 include("diagrams/diagrams.jl")
 
 include("computable_dags/compute.jl")
 include("computable_dags/generation.jl")
+include("computable_dags/fermion_sign.jl")
+include("computable_dags/indexing.jl")
+include("computable_dags/utils.jl")
 
 end # module QEDFeynmanDiagrams

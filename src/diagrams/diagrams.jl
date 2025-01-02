@@ -53,210 +53,12 @@ struct FeynmanDiagram{N,E,U,T,M,FM} <:
     end
 end
 
-const OPEN_FERMION_CYCLE_T = Tuple{Int64,Int64}
-
-"""
-    VirtualParticle{
-        PROC<:AbstractProcessDefinition,
-        NTuple{I,Bool},
-        NTuple{O,Bool},
-    }
-
-Representation of a virtual particle and the return type of the [`virtual_particles`](@ref) function.
-The type parameters are:
-- PROC: The process this particle is a process of.
-- PT: The particle type of this virtual particle, e.g. [`QEDcore.Photon`](@extref) or [`QEDcore.Electron`](@extref).
-- I: NTuple of Bools with the incoming momentum contributions
-- O: NTuple of Bools with the outgoing momentum contributions
-"""
-struct VirtualParticle{PROC<:AbstractProcessDefinition,IT<:NTuple,OT<:NTuple}
-    proc::PROC
-    species::Type
-    in_particle_contributions::IT
-    out_particle_contributions::OT
-
-    # open cycles in the context of fermion permutations
-    # for n fermion lines in a process, there can be between 1 (like 1-2, 2-3, 3-1) and n (like 1-1, 2-2, 3-3) cycles
-    # where the left number represents the canonical fermion index and the right number the canonical antifermion index
-    open_cycles::Vector{OPEN_FERMION_CYCLE_T}
-
-    function VirtualParticle(
-        proc::PROC, species::PT, in_contrib::I, out_contrib::O
-    ) where {PROC,PT,I,O}
-        return new{PROC,I,O}(
-            proc, typeof(species), in_contrib, out_contrib, OPEN_FERMION_CYCLE_T[]
-        )
-    end
-    function VirtualParticle{PROC,I,O}(
-        proc::PROC, species::PT, in_contrib::I, out_contrib::O
-    ) where {PROC,PT,I,O}
-        return new{PROC,I,O}(
-            proc, typeof(species), in_contrib, out_contrib, OPEN_FERMION_CYCLE_T[]
-        )
-    end
-    function VirtualParticle(
-        proc::PROC,
-        species::PT,
-        in_contrib::I,
-        out_contrib::O,
-        open_cycles::Vector{OPEN_FERMION_CYCLE_T},
-    ) where {PROC,PT,I,O}
-        return new{PROC,I,O}(proc, typeof(species), in_contrib, out_contrib, open_cycles)
-    end
-end
-
-function Base.hash(vp::VP, h::UInt) where {VP<:VirtualParticle}
-    h = hash(VP, h)
-    h = hash(vp.proc, h)
-    h = hash(vp.species, h)
-    h = hash(vp.in_particle_contributions, h)
-    h = hash(vp.out_particle_contributions, h)
-    h = hash(vp.open_cycles, h)
-    return h
-end
-
-function Base.isequal(vp1::VP, vp2::VP) where {VP<:VirtualParticle}
-    return vp1.species == vp2.species &&
-           vp1.in_particle_contributions == vp2.in_particle_contributions &&
-           vp1.out_particle_contributions == vp2.out_particle_contributions &&
-           vp1.open_cycles == vp2.open_cycles
-end
-
-function _canonical_fermion_indices(vp::VP) where {VP<:VirtualParticle}
-    left_ferms = Int[]
-    right_ferms = Int[]
-    for (contribs, dir) in Iterators.zip(
-        (vp.in_particle_contributions, vp.out_particle_contributions),
-        (Incoming(), Outgoing()),
-    )
-        c = 0
-        for contrib in contribs
-            c += 1
-            if !contrib
-                continue
-            end
-            (lr, index) = _get_canonical_index(vp.proc, dir, c)
-            if lr == :left
-                push!(left_ferms, index)
-            elseif lr == :right
-                push!(right_ferms, index)
-            end
-        end
-    end
-
-    return (left_ferms, right_ferms)
-end
-
-function _canonical_index(vp::VP) where {VP<:VirtualParticle}
-    @assert vp.species != Photon "canonical index is only for (anti-)fermions"
-    (left_ferms, right_ferms) = _canonical_fermion_indices(vp)
-
-    # remove stuff
-    for cycle in vp.open_cycles
-        filter!(x -> x != cycle[1], left_ferms)
-        filter!(x -> x != cycle[2], right_ferms)
-    end
-
-    left_minus_right = [setdiff(Set(left_ferms), Set(right_ferms))...]
-    right_minus_left = [setdiff(Set(right_ferms), Set(left_ferms))...]
-
-    if length(left_minus_right) == 1
-        @assert isempty(right_minus_left)
-        return (:left, left_minus_right[begin])
-    elseif length(right_minus_left) == 1
-        @assert isempty(left_minus_right)
-        return (:right, right_minus_left[begin])
-    else
-        @assert false
-    end
-end
-
-function Base.show(io::IO, vp::VirtualParticle)
-    pr = x -> x ? "1" : "0"
-    return print(
-        io,
-        "$(string(particle_species(vp))[1:3]): $(*(pr.(vp.in_particle_contributions)...)) | $(*(pr.(vp.out_particle_contributions)...)) | $(isempty(vp.open_cycles) ? "[      ]" : "$(vp.open_cycles)")",
-    )
-end
-
-"""
-    process(::AbstractTreeLevelFeynmanDiagram)::QEDbase.AbstractProcessDefinition
-
-Interface function that must be implemented for an instance of [`AbstractTreeLevelFeynmanDiagram`](@ref).
-
-Return the specific [`QEDbase.AbstractProcessDefinition`](@extref) which the given diagram is for.
-"""
-@inline function QEDbase.process(vp::VirtualParticle)
-    return vp.proc
-end
-
-@inline function QEDbase.particle_species(vp::VirtualParticle)
-    return (vp.species)()
-end
-
-@inline function _in_contributions(vp::VirtualParticle{PROC,I,O})::I where {PROC,I,O}
-    return vp.in_particle_contributions
-end
-@inline function _out_contributions(vp::VirtualParticle{PROC,I,O})::O where {PROC,I,O}
-    return vp.out_particle_contributions
-end
-@inline function _contributions(vp::VirtualParticle{PROC,I,O})::Tuple{I,O} where {PROC,I,O}
-    return ((_in_contributions(vp), _out_contributions(vp)))
-end
-
-@inline function is_virtual(vp::VirtualParticle)
-    return _number_contributions(vp) > 1
-end
-@inline function is_external(vp::VirtualParticle)
-    return _number_contributions(vp) == 1
-end
-
 # "addition" of the bool tuples
 # TODO: this should probably not overload and export a + operator for base types
 function Base.:+(
     a::Tuple{NTuple{I,Bool},NTuple{O,Bool}}, b::Tuple{NTuple{I,Bool},NTuple{O,Bool}}
 ) where {I,O}
     return (ntuple(i -> a[1][i] != b[1][i], I), ntuple(i -> a[2][i] != b[2][i], O))
-end
-
-@inline _invert(::Electron) = Positron()
-@inline _invert(::Positron) = Electron()
-@inline _invert(::Photon) = Photon()
-
-@inline _invert(t::Type) = typeof(_invert(t()))
-
-function _invert(::AbstractParticleType)
-    throw(InvalidInputError("unimplemented for this particle type"))
-end
-
-function _invert(virtual_particle::VirtualParticle)
-    I = length(virtual_particle.in_particle_contributions)
-    O = length(virtual_particle.out_particle_contributions)
-
-    new_cycles = sort([(cycle[2], cycle[1]) for cycle in virtual_particle.open_cycles])
-
-    return VirtualParticle(
-        virtual_particle.proc,
-        _invert(particle_species(virtual_particle)),
-        ntuple(x -> !virtual_particle.in_particle_contributions[x], I),
-        ntuple(x -> !virtual_particle.out_particle_contributions[x], O),
-        new_cycles,
-    )
-end
-
-# normalize the representation
-function normalize(virtual_particle::VirtualParticle)
-    I = length(_in_contributions(virtual_particle))
-    O = length(_out_contributions(virtual_particle))
-    data = _contributions(virtual_particle)
-    s = sum(data[1]) + sum(data[2])
-    if s > (I + O) / 2
-        return _invert(virtual_particle)
-    elseif s == (I + O) / 2 && data[1][1] == false
-        return _invert(virtual_particle)
-    else
-        return virtual_particle
-    end
 end
 
 @inline function _momentum_contribution_helper(
@@ -399,56 +201,6 @@ end
 
 function _number_contributions(vp::VirtualParticle)
     return sum(vp.in_particle_contributions) + sum(vp.out_particle_contributions)
-end
-
-Base.isless(::ParticleDirection, ::ParticleDirection) = false
-Base.isless(::Incoming, ::Outgoing) = true
-Base.isless(::UnknownDirection, ::Incoming) = true
-Base.isless(::UnknownDirection, ::Outgoing) = true
-
-function Base.isless(a::VirtualParticle, b::VirtualParticle)
-    if _number_contributions(a) == _number_contributions(b)
-        if a.in_particle_contributions == b.in_particle_contributions
-            if a.out_particle_contributions == b.out_particle_contributions
-                return a.open_cycles < b.open_cycles
-            end
-            return a.out_particle_contributions < b.out_particle_contributions
-        end
-        return a.in_particle_contributions < b.in_particle_contributions
-    end
-    return _number_contributions(a) < _number_contributions(b)
-end
-
-"""
-    disjunct(a::VirtualParticle, b::VirtualParticle)
-
-Return true if the momenta contributions of `a` and `b` are disjunct.
-"""
-function disjunct(a::VirtualParticle, b::VirtualParticle)
-    for (a_contrib, b_contrib) in
-        Iterators.zip(Iterators.flatten.(_contributions.((a, b)))...)
-        if b_contrib && a_contrib
-            return false
-        end
-    end
-
-    return true
-end
-
-"""
-    contains(a::VirtualParticle, b::VirtualParticle)
-
-Returns true if the set of particles contributing to `a` are contains the set of particles contributing to `b`.
-"""
-function contains(a::VirtualParticle, b::VirtualParticle)
-    for (a_contrib, b_contrib) in
-        Iterators.zip(Iterators.flatten.(_contributions.((a, b)))...)
-        if b_contrib && !a_contrib
-            return false
-        end
-    end
-
-    return true
 end
 
 @inline _make_up_helper(a::Tuple{}, b::Tuple{}, c::Tuple{}) = true
@@ -731,7 +483,7 @@ function virtual_particles(
         end
     end
 
-    return normalize.(result)[1:(end - 1)]
+    return result[1:(end - 1)]
 end
 
 #
@@ -1157,7 +909,6 @@ end
         elseif electrons + positrons + photons > (I + O) / 2
             continue
         elseif electrons + positrons + photons == (I + O) / 2 && in_contribs[1] == false
-            # break symmetry in the same way that normalize would
             continue
         end
 

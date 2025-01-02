@@ -1,15 +1,3 @@
-_construction_string(::Incoming) = "Incoming()"
-_construction_string(::Outgoing) = "Outgoing()"
-
-_construction_string(::Electron) = "Electron()"
-_construction_string(::Positron) = "Positron()"
-_construction_string(::Photon) = "Photon()"
-
-_construction_string(::PolX) = "PolX()"
-_construction_string(::PolY) = "PolY()"
-_construction_string(::SpinUp) = "SpinUp()"
-_construction_string(::SpinDown) = "SpinDown()"
-
 function _parse_particle(name::String)
     local dir
     if startswith(name, "inc_")
@@ -146,15 +134,6 @@ function ComputableDAGs.input_type(p::AbstractProcessDefinition)
     }
 end
 
-_species_str(::Photon) = "ph"
-_species_str(::Electron) = "el"
-_species_str(::Positron) = "po"
-
-_spin_pol_str(::SpinUp) = "su"
-_spin_pol_str(::SpinDown) = "sd"
-_spin_pol_str(::PolX) = "px"
-_spin_pol_str(::PolY) = "py"
-
 function Base.parse(::Type{AbstractSpinOrPolarization}, s::AbstractString)
     if s == "su"
         return SpinUp()
@@ -169,65 +148,6 @@ function Base.parse(::Type{AbstractSpinOrPolarization}, s::AbstractString)
         return PolY()
     end
     throw(InvalidInputError("invalid string \"$s\" to parse to AbstractSpinOrPolarization"))
-end
-
-_dir_str(::Incoming) = "inc"
-_dir_str(::Outgoing) = "out"
-
-# the possible spins or pols for generating base state tasks
-_spin_pols(::AllSpin) = (SpinUp(), SpinDown())
-_spin_pols(::SyncedSpin) = (SpinUp(), SpinDown())
-_spin_pols(::SpinUp) = (SpinUp(),)
-_spin_pols(::SpinDown) = (SpinDown(),)
-
-_spin_pols(::AllPol) = (PolX(), PolY())
-_spin_pols(::SyncedPol) = (PolX(), PolY())
-_spin_pols(::PolX) = (PolX(),)
-_spin_pols(::PolY) = (PolY(),)
-
-_is_external(p::VirtualParticle) = _number_contributions(p) == 1
-
-function _total_index(
-    proc::AbstractProcessDefinition,
-    dir::ParticleDirection,
-    species::AbstractParticleType,
-    n::Int,
-)
-    # find particle index of all particles given n-th particle of dir and species (inverse of _species_index)
-    total_index = 0
-    species_count = 0
-    for p in particles(proc, dir)
-        total_index += 1
-        if species == p
-            species_count += 1
-        end
-        if species_count == n
-            return if dir == Incoming()
-                total_index
-            else
-                number_incoming_particles(proc) + total_index
-            end
-        end
-    end
-
-    throw("did not find $n-th $dir $species")
-end
-
-function _species_index(
-    proc::AbstractProcessDefinition,
-    dir::ParticleDirection,
-    species::AbstractParticleType,
-    n::Int,
-)
-    # find particle index of n-th particle of *this species and dir*
-    species_index = 0
-    for i in 1:n
-        if particles(proc, dir)[i] == species
-            species_index += 1
-        end
-    end
-
-    return species_index
 end
 
 function _base_state_name(p::VirtualParticle)
@@ -316,12 +236,6 @@ function _make_node_name(spin_pols::Vector)
     return node_name
 end
 
-# return an index for the argument ordering on edges in the DAG for a given particle species, photon -> 1, electron -> 2, positron -> 3
-_edge_index_from_species(::Photon) = 1
-_edge_index_from_species(::Electron) = 2
-_edge_index_from_species(::Positron) = 3
-_edge_index_from_vp(vp::VirtualParticle) = _edge_index_from_species(particle_species(vp))
-
 """
     _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tuple)
 
@@ -372,98 +286,6 @@ function _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tup
     end
 
     return true
-end
-
-"""
-    _get_canonical_index(proc::AbstractProcessDefinition, dir::ParticleDirection, index::Int)
-
-Returns a tuple of a symbol which is either `:left` or `:right` in the case of fermions, and `:boson`, in the case of a boson, and an Int giving the index of the particle.
-"""
-function _get_canonical_index(
-    proc::AbstractProcessDefinition, dir::ParticleDirection, index::Int
-)
-    species = particles(proc, dir)[index]
-    species_index = _species_index(proc, dir, species, index)
-
-    inc_parts = number_particles(proc, Incoming(), Electron())
-    inc_anti_parts = number_particles(proc, Incoming(), Positron())
-
-    if is_boson(species)
-        return (:boson, species_index)
-    elseif is_particle(species) && is_incoming(dir)
-        return (:left, species_index)
-    elseif is_anti_particle(species) && is_outgoing(dir)
-        return (:left, species_index + inc_parts)
-    elseif is_anti_particle(species) && is_incoming(dir)
-        return (:right, species_index)
-    elseif is_particle(species) && is_outgoing(dir)
-        return (:right, species_index + inc_anti_parts)
-    end
-
-    throw("unknown species/dir combination encountered: $(species)/$(dir)")
-end
-
-"""
-    relative_sign_pair(p1::VirtualParticle, p2::VirtualParticle)
-
-Returns true if the Pair task combining p1 and p2 into res needs a relative sign in the DAG.
-"""
-function relative_sign_pair(p1::VirtualParticle, p2::VirtualParticle)
-    if (p1.species == Photon || p2.species == Photon)
-        #@info "P [FALS] relative sign of $p1 + $p2 -> $res"
-        return false
-    end
-
-    local vec::Vector{OPEN_FERMION_CYCLE_T}
-
-    (l, el) = if p1.species == Electron
-        _canonical_index(p1)
-    elseif p2.species == Electron
-        _canonical_index(p2)
-    end
-    (r, po) = if p1.species == Positron
-        _canonical_index(p1)
-    elseif p2.species == Positron
-        _canonical_index(p2)
-    end
-
-    vec = [p1.open_cycles..., p2.open_cycles..., (el, po)]
-
-    n = _count_closed_cycles(vec)
-
-    return n % 2 == 1
-end
-
-"""
-    relative_sign_triple(p2::VirtualParticle, p3::VirtualParticle, p3::VirtualParticle)
-
-Returns true if the Triple task combining electron p1, and positron p2 into a full diagram family needs a relative sign in the DAG.
-"""
-function relative_sign_triple(p1::VirtualParticle, p2::VirtualParticle, p3::VirtualParticle)
-    # p1 + p2 is the photon
-    n1 = relative_sign_pair(p1, p2)
-
-    new_cycle = (_canonical_index(p1)[2], _canonical_index(p2)[2])
-
-    res = VirtualParticle(
-        p1.proc,
-        Photon(),
-        (_contributions(p1) + _contributions(p2))...,
-        sort(
-            reduce_cycles(
-                OPEN_FERMION_CYCLE_T[p1.open_cycles..., p2.open_cycles..., new_cycle]
-            ),
-        ),
-    )
-
-    # cycles closed?
-    closed_cycle_count = _count_closed_cycles(
-        OPEN_FERMION_CYCLE_T[p3.open_cycles..., res.open_cycles...]
-    )
-
-    n2 = closed_cycle_count % 2 == 1
-
-    return n1 != n2 # xor
 end
 
 """
@@ -640,9 +462,9 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
             end
             data_triples = insert_node!(g, DataTask(0))
 
-            insert_edge!(g, a, compute_triples, 1) # first argument photons
-            insert_edge!(g, b, compute_triples, 2) # second argument electrons
-            insert_edge!(g, c, compute_triples, 3) # third argument positrons
+            insert_edge!(g, a, compute_triples, _edge_index_from_species(Photon())) # first argument photons
+            insert_edge!(g, b, compute_triples, _edge_index_from_species(Electron())) # second argument electrons
+            insert_edge!(g, c, compute_triples, _edge_index_from_species(Positron())) # third argument positrons
 
             insert_edge!(g, compute_triples, data_triples)
 
