@@ -25,10 +25,9 @@ proc = ScatteringProcess(
     (SpinUp(), ntuple(_ -> SpinUp(), 2 * n)...),                                    # outgoing particle spin/pols
 )
 
-# The [`feynman_diagrams`](@ref) function returns an iterator for all possible Feynman diagrams
-# for this scattering process. With its `length` overload, we can check how many diagrams
-# there are.
-length(feynman_diagrams(proc))
+# The [`number_of_diagrams`](@ref) function returns how many valid Feynman diagrams
+# there are for a given process.
+number_of_diagrams(proc)
 
 # Next, we can generate the DAG representing the computation for our scattering process'
 # squared matrix element. This uses `ComputableDAGs.jl`.

@@ -25,11 +25,9 @@ proc = ScatteringProcess(
     (AllSpin(), AllPol()),                         # outgoing particle spin/pols
 )
 
-# The [`feynman_diagrams`](@ref) function returns an iterator for all possible Feynman diagrams
-# for this scattering process. With its `length` overload, we can check how many diagrams
-# there are. For an n-photon Compton process with `n` incoming photons, this should be
-# $(n+1)!$.
-length(feynman_diagrams(proc))
+# The [`number_of_diagrams`](@ref) function returns how many diagrams there are for a given process.
+# For an n-photon Compton process with `n` incoming photons, this should be $(n+1)!$.
+number_of_diagrams(proc)
 
 # Next, we can generate the DAG representing the computation for our scattering process'
 # squared matrix element. This uses [`ComputableDAGs.jl`](https://github.com/ComputableDAGs/ComputableDAGs.jl).
