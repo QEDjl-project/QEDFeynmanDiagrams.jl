@@ -96,7 +96,7 @@ function ComputableDAGs.input_expr(
 
         vp = virtual_particles(proc)[index]
         return Meta.parse("QEDFeynmanDiagrams.PropagatorInput(
-                              VirtualParticle(
+                              QEDFeynmanDiagrams.VirtualParticle(
                                 process($psp_symbol),
                                 $(_construction_string(particle_species(vp))),
                                 $(vp.in_particle_contributions),

@@ -106,35 +106,3 @@ end
 @inline function is_external(vp::VirtualParticle)
     return _number_contributions(vp) == 1
 end
-
-"""
-    disjunct(a::VirtualParticle, b::VirtualParticle)
-
-Return true if the momenta contributions of `a` and `b` are disjunct.
-"""
-function disjunct(a::VirtualParticle, b::VirtualParticle)
-    for (a_contrib, b_contrib) in
-        Iterators.zip(Iterators.flatten.(_contributions.((a, b)))...)
-        if b_contrib && a_contrib
-            return false
-        end
-    end
-
-    return true
-end
-
-"""
-    contains(a::VirtualParticle, b::VirtualParticle)
-
-Returns true if the set of particles contributing to `a` are contains the set of particles contributing to `b`.
-"""
-function contains(a::VirtualParticle, b::VirtualParticle)
-    for (a_contrib, b_contrib) in
-        Iterators.zip(Iterators.flatten.(_contributions.((a, b)))...)
-        if b_contrib && !a_contrib
-            return false
-        end
-    end
-
-    return true
-end
