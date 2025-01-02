@@ -1,3 +1,31 @@
+"""
+    number_of_diagrams(proc::AbstractProcessDefinition)
+
+For a given [`QEDbase.AbstractProcessDefinition`](@extref), returns the number of valid
+Feynman diagrams at tree-level.
+"""
+function number_of_diagrams(proc::AbstractProcessDefinition)
+    M =
+        number_particles(proc, Incoming(), Photon()) +
+        number_particles(proc, Outgoing(), Photon())
+
+    E =
+        number_particles(proc, Incoming(), Electron()) +
+        number_particles(proc, Outgoing(), Positron())
+    anti_E =
+        number_particles(proc, Incoming(), Positron()) +
+        number_particles(proc, Outgoing(), Electron())
+
+    @assert E == anti_E "no valid Feynman diagrams exist for the given process\n$proc"
+
+    # TODO: add muons/tauons
+    U = 0
+    T = 0
+
+    N = E + U + T
+    return factorial(M + 3 * N - 3, 2 * N - 1) * factorial(E) * factorial(U) * factorial(T)
+end
+
 # "addition" of the bool tuples
 # TODO: this should probably not overload and export a + operator for base types
 function Base.:+(
@@ -148,6 +176,18 @@ function _number_contributions(vp::VirtualParticle)
     return sum(vp.in_particle_contributions) + sum(vp.out_particle_contributions)
 end
 
+"""
+    particle_pairs(particles::Vector{VirtualParticle})
+
+From a vector of particles (e.g., generated from [`virtual_particles`](@ref)), generate
+a `Dict` which maps from a [`VirtualParticle`](@ref) to a vector of `Tuple`s (pairs) of
+[`VirtualParticle`](@ref)s. The two virtual particles of each tuple [`make_up`](@ref) the
+key `VirtualParticle`.
+
+The result is used in the [`graph`](@ref) generation.
+
+See also: [`total_particle_triples`](@ref)
+"""
 function particle_pairs(
     particles::Vector{SPECIFIC_VP}
 ) where {PROC,I,O,SPECIFIC_VP<:VirtualParticle{PROC,I,O}}
@@ -184,6 +224,13 @@ function particle_pairs(
     return pairs
 end
 
+"""
+    total_particle_triples(particles::Vector{VirtualParticle})
+
+Similar to [`particle_pairs`](@ref), this generates a `Vector` of `Tuples` (triples). Each tuple
+contains three particles, a [`QEDcore.Photon`](@extref), a [`QEDcore.Fermion`](@extref), and a
+[`QEDcore.AntiFermion`](@extref). These three particles [`are_total`](@ref).
+"""
 function total_particle_triples(
     particles::Vector{VirtualParticle{PROC,I,O}}
 ) where {PROC,I,O}
@@ -235,6 +282,13 @@ function _pseudo_virtual_particles(proc::AbstractProcessDefinition)
     )
 end
 
+"""
+    _count_particles(particles::Tuple{SPECIES...}, ::Tuple{Bool...}, species::AbstractParticleType)
+
+Return the number of particles of the given species in the first tuple where at the same index the second tuple contains a `true`.
+
+The tuples need to match in length or an error is thrown.
+"""
 @inline _count_particles(::Tuple{}, ::Tuple{}, species) = 0
 @inline function _count_particles(
     parts::Tuple{SPECIES,Vararg}, bools::Tuple{Bool,Vararg}, species::SPECIES
@@ -431,7 +485,12 @@ function gen_specific_vp_with_open_cycles(
     ]
 end
 
-# use a small LRU maxsize since these vectors could get large
+"""
+    virtual_particles(proc::AbstractProcessDefinition)
+
+For a given [`QEDbase.AbstractProcessDefinition`](@extref), generate all virtual particles ([`VirtualParticle`](@ref)) that occur
+in some valid diagram. For more information see the virtual particle docs.
+"""
 @memoize LRU(maxsize=3) function virtual_particles(
     proc::PROC
 ) where {PROC<:AbstractProcessDefinition}

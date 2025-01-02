@@ -10,7 +10,7 @@ using LRUCache
 using Memoization
 using DataStructures
 
-export graph
+export graph, number_of_diagrams
 
 include("diagrams/virtual_particle.jl")
 include("diagrams/vp_utils.jl")

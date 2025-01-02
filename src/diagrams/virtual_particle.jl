@@ -75,13 +75,6 @@ function Base.show(io::IO, vp::VirtualParticle)
     )
 end
 
-"""
-    process(::AbstractTreeLevelFeynmanDiagram)::QEDbase.AbstractProcessDefinition
-
-Interface function that must be implemented for an instance of [`AbstractTreeLevelFeynmanDiagram`](@ref).
-
-Return the specific [`QEDbase.AbstractProcessDefinition`](@extref) which the given diagram is for.
-"""
 @inline function QEDbase.process(vp::VirtualParticle)
     return vp.proc
 end
