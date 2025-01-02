@@ -1,5 +1,9 @@
 using SafeTestsets
 
+@safetestset "Number of diagrams" begin
+    include("number_of_diagrams.jl")
+end
+
 @safetestset "Input Type" begin
     include("input_type.jl")
 end
