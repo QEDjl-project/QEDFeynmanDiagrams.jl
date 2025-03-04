@@ -56,7 +56,7 @@ func = get_compute_function(dag, proc, cpu_st(), @__MODULE__);
 psp = PhaseSpacePoint(
     proc,
     PerturbativeQED(),
-    PhasespaceDefinition(SphericalCoordinateSystem(), ElectronRestFrame()),
+    TwoBodyTargetSystem(),
     tuple((rand(SFourMomentum) for _ in 1:number_incoming_particles(proc))...),
     tuple((rand(SFourMomentum) for _ in 1:number_outgoing_particles(proc))...),
 )

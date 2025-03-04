@@ -25,11 +25,7 @@ function gen_process_input(rng::AbstractRNG, proc::AbstractProcessDefinition)
     )
 
     return PhaseSpacePoint(
-        proc,
-        PerturbativeQED(),
-        PhasespaceDefinition(SphericalCoordinateSystem(), ElectronRestFrame()),
-        in_momenta,
-        out_momenta,
+        proc, PerturbativeQED(), TwoBodyTargetSystem(), in_momenta, out_momenta
     )
 end
 

@@ -128,7 +128,7 @@ function ComputableDAGs.input_type(p::AbstractProcessDefinition)
     return AbstractPhaseSpacePoint{
         typeof(p),
         <:AbstractModelDefinition,
-        <:AbstractPhasespaceDefinition,
+        <:AbstractPhaseSpaceLayout,
         <:Tuple{in_t...},
         <:Tuple{out_t...},
     }
