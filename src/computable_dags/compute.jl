@@ -46,6 +46,11 @@ children(t::ComputeTask_SpinPolCumulation) = t.children
 struct BaseStateInput{PS_T<:AbstractParticleStateful,SPIN_POL_T<:AbstractSpinOrPolarization}
     particle::PS_T
     spin_pol::SPIN_POL_T
+
+    function BaseStateInput(ps::PS_T, spinpol::SPIN_POL_T) where {PS_T,SPIN_POL_T}
+        @info "creating base state input from $ps with $spinpol"
+        return new{PS_T,SPIN_POL_T}(ps, spinpol)
+    end
 end
 
 function compute(
@@ -71,6 +76,11 @@ end
 struct PropagatorInput{VP_T<:VirtualParticle,PSP_T<:AbstractPhaseSpacePoint}
     vp::VP_T
     psp::PSP_T
+
+    function PropagatorInput(vp::VP_T, psp::PSP_T) where {VP_T,PSP_T}
+        @info "creating propagator input with $vp and $psp"
+        return new{VP_T,PSP_T}(vp, psp)
+    end
 end
 
 @inline _masked_sum(::Tuple{}, ::Tuple{}) = error("masked sum needs at least one argument")
