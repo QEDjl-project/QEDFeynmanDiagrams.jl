@@ -1,6 +1,7 @@
 using Combinatorics
 using QEDFeynmanDiagrams
-import QEDFeynmanDiagrams.VERTEX
+
+VERTEX = QEDFeynmanDiagrams.VERTEX
 
 function assert_compton(proc::AbstractProcessDefinition)
     @assert number_particles(proc, Incoming(), Electron()) == 1 "there should be exactly one incoming electron"
@@ -10,63 +11,16 @@ function assert_compton(proc::AbstractProcessDefinition)
             2 == number_particles(proc, Incoming()) + number_particles(proc, Outgoing()) "there should only be an incoming and outgoing electron, and photons"
 end
 
-#=function two_compton_diagram(
-    in_el, out_el, ph_1, ph_2, ph_3, in_el_s, out_el_s, ph_1_p, ph_2_p, ph_3_p
-)
-    # in_el -> ph_1 -> ph_2 -> ph_3 -> out_el
-    v = base_state(Electron(), Incoming(), in_el, in_el_s)
-
-    # base state of ph1
-    v = base_state(Photon(), Incoming(), ph_1, ph_1_p) * VERTEX * v     # direction of photon doesn't matter here
-
-    # propagator after ph1
-    v = propagator(Electron(), in_el + ph_1) * v
-
-    # base state of ph2
-    v = base_state(Photon(), Incoming(), ph_2, ph_2_p) * VERTEX * v
-
-    # propagator after ph2
-    v = propagator(Electron(), in_el + ph_1 + ph_2) * v
-
-    # base state of ph3
-    v = base_state(Photon(), Incoming(), ph_3, ph_3_p) * VERTEX * v
-
-    # base state of out_el
-    v = base_state(Electron(), Outgoing(), out_el, out_el_s) * v
-
-    return v
-end=#
-
 function two_compton_diagram(
     in_el, out_el, ph_1, ph_2, ph_3, in_el_s, out_el_s, ph_1_p, ph_2_p, ph_3_p
 )
-    #@info "inner electron 1: $(in_el + ph_1)\n$(propagator(Electron(), in_el + ph_1))"
-    #@info "inner electron 2: $(in_el + ph_1 + ph_2)\n$(propagator(Electron(), in_el + ph_1 + ph_2))"
-    v =
-        base_state(Electron(), Outgoing(), -out_el, out_el_s) *
-        (base_state(Photon(), Incoming(), ph_3, ph_3_p) * VERTEX) *
-        propagator(Electron(), -out_el - ph_3) *
-        (base_state(Photon(), Incoming(), ph_2, ph_2_p) * VERTEX) *
-        propagator(Electron(), -out_el - ph_2 - ph_3) *
-        (base_state(Photon(), Incoming(), ph_1, ph_1_p) * VERTEX) *
-        base_state(Electron(), Incoming(), in_el, in_el_s)
-
-    return v
-end
-
-function two_compton_diagram_inv(
-    in_el, out_el, ph_1, ph_2, ph_3, in_el_s, out_el_s, ph_1_p, ph_2_p, ph_3_p
-)
-    v =
-        base_state(Positron(), Incoming(), out_el, out_el_s) *
-        (base_state(Photon(), Incoming(), ph_3, ph_3_p) * VERTEX) *
-        propagator(Electron(), +out_el - ph_3) *
-        (base_state(Photon(), Incoming(), ph_2, ph_2_p) * VERTEX) *
-        propagator(Electron(), +out_el - ph_2 - ph_3) *
-        (base_state(Photon(), Incoming(), ph_1, ph_1_p) * VERTEX) *
-        base_state(Electron(), Incoming(), in_el, in_el_s)
-
-    return v
+    return base_state(Electron(), Outgoing(), -out_el, out_el_s) *
+           (base_state(Photon(), Incoming(), ph_3, ph_3_p) * VERTEX) *
+           propagator(Electron(), -out_el - ph_3) *
+           (base_state(Photon(), Incoming(), ph_2, ph_2_p) * VERTEX) *
+           propagator(Electron(), -out_el - ph_2 - ph_3) *
+           (base_state(Photon(), Incoming(), ph_1, ph_1_p) * VERTEX) *
+           base_state(Electron(), Incoming(), in_el, in_el_s)
 end
 
 function two_compton_spin_pol_comb(psp, spin_pols)
@@ -102,12 +56,10 @@ function two_compton_spin_pol_comb(psp, spin_pols)
         in_el, out_el, ph_3, ph_2, ph_1, in_el_s, out_el_s, ph_3_p, ph_2_p, ph_1_p
     )
 
-    #@info "$diag1, $diag2, $diag3, $diag4, $diag5, $diag6"
-
     return abs2(diag1 + diag2 + diag3 + diag4 + diag5 + diag6)
 end
 
-function two_compton_matel(psp::AbstractPhaseSpacePoint)
+function two_compton_mat_el(psp::AbstractPhaseSpacePoint)
     proc = process(psp)
     assert_compton(proc)
     @assert number_particles(proc, Outgoing(), Photon()) == 2 "there should be exactly two outgoing photons"

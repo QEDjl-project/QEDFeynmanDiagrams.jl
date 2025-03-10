@@ -11,22 +11,25 @@ using Logging
 using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
-VERTEX = QEDFeynmanDiagrams.VERTEX
-
 include("utils.jl")
-include("impl/bhabha.jl")
 
 RNG = MersenneTwister(0)
+PROC = ScatteringProcess((Electron(), Photon()), (Electron(), Photon(), Photon()))
+MODEL = PerturbativeQED()
+INPSL = TwoBodyTargetSystem()
 
-@testset "Bhabha Scattering ep -> ep" begin
-    g = graph(bhabha)
+include("impl/compton.jl")
+
+@testset "Two Photon Compton" begin
+    g = graph(PROC)
+
     # suppress type inference warnings; they don't matter here
     f = with_logger(ConsoleLogger(Logging.Error)) do
-        get_compute_function(g, bhabha, cpu_st(), @__MODULE__)
+        get_compute_function(g, PROC, cpu_st(), @__MODULE__)
     end
     for i in 1:10
-        input = gen_process_input(RNG, bhabha)
+        input = gen_process_input(RNG, PROC)
 
-        @test isapprox(f(input), _ground_truth_bhabha(input))
+        @test isapprox(f(input), two_compton_mat_el(input))
     end
 end

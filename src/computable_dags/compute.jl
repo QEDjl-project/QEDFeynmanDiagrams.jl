@@ -48,7 +48,6 @@ struct BaseStateInput{PS_T<:AbstractParticleStateful,SPIN_POL_T<:AbstractSpinOrP
     spin_pol::SPIN_POL_T
 
     function BaseStateInput(ps::PS_T, spinpol::SPIN_POL_T) where {PS_T,SPIN_POL_T}
-        #@info "creating base state input from $ps with $spinpol"
         return new{PS_T,SPIN_POL_T}(ps, spinpol)
     end
 end
@@ -66,7 +65,6 @@ function compute(
         momentum(input.particle),
         input.spin_pol,
     )
-    #@info "base state $(particle_direction(input.particle)) $(particle_species(input.particle)): $(state)"
     return Propagated( # "propagated" because it goes directly into the next pair
         species,
         state,
@@ -79,7 +77,6 @@ struct PropagatorInput{VP_T<:VirtualParticle,PSP_T<:AbstractPhaseSpacePoint}
     psp::PSP_T
 
     function PropagatorInput(vp::VP_T, psp::PSP_T) where {VP_T,PSP_T}
-        #@info "creating propagator input with $vp and $psp"
         return new{VP_T,PSP_T}(vp, psp)
     end
 end
@@ -99,7 +96,14 @@ end
 end
 
 function _vp_momentum(
-    vp::VirtualParticle{PROC,I,O}, psp::AbstractPhaseSpacePoint
+    vp::VirtualParticle{PROC,I,O}, psp::AbstractPhaseSpacePoint, ::Positron
+) where {PROC,I,O}
+    return -_masked_sum(momenta(psp, Incoming()), _in_contributions(vp)) +
+           _masked_sum(momenta(psp, Outgoing()), _out_contributions(vp))
+end
+
+function _vp_momentum(
+    vp::VirtualParticle{PROC,I,O}, psp::AbstractPhaseSpacePoint, ::AbstractParticleType
 ) where {PROC,I,O}
     return _masked_sum(momenta(psp, Incoming()), _in_contributions(vp)) -
            _masked_sum(momenta(psp, Outgoing()), _out_contributions(vp))
@@ -108,14 +112,9 @@ end
 function compute(
     ::ComputeTask_Propagator, input::PropagatorInput{VP_T,PSP_T}
 ) where {VP_T,PSP_T}
-    vp_mom = _vp_momentum(input.vp, input.psp)
     vp_species = particle_species(input.vp)
-    inner = if (vp_species isa Positron)
-        QEDbase.propagator(vp_species, -vp_mom)
-    else
-        QEDbase.propagator(vp_species, vp_mom)
-    end
-    #@info "Propagator of $vp_species with momentum $vp_mom is $inner\nfrom $(input.vp)"
+    vp_mom = _vp_momentum(input.vp, input.psp, vp_species)
+    inner = QEDbase.propagator(vp_species, vp_mom)
     return inner
 end
 
@@ -206,13 +205,11 @@ end
 function compute(::ComputeTask_CollectTriples, args::Vararg{N,T}) where {N,T}
     #println("$([args...])")
     #println("$(sum(args))")
-    #@info args
     return sum(args)
 end
 function compute(::ComputeTask_SpinPolCumulation, args::Vararg{N,T}) where {N,T}
     sum = 0.0
     for arg in args
-        #@info abs2(arg)
         sum += abs2(arg)
     end
     return sum

@@ -8,6 +8,10 @@ end
     include("input_type.jl")
 end
 
+@safetestset "2-Photon Compton" begin
+    include("two_photon_compton.jl")
+end
+
 @safetestset "Fermion Exchange" begin
     include("fermion_exchange.jl")
 end
