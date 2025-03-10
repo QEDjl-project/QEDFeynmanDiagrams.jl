@@ -40,25 +40,27 @@ using ComputableDAGs
 using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
-# With the DAG, the process, and `RuntimeGeneratedFunctions` initalized, 
-# we can now generate the actual computable function:
-func = get_compute_function(dag, proc, cpu_st(), @__MODULE__);
-
 # Now we need an input for the function, which is a [`QEDcore.PhaseSpacePoint`](@extref).
 # For now, we generate random momenta for every particle. In the future, QEDevents
 # will be able to generate physical `PhaseSpacePoint`s.
 psp = PhaseSpacePoint(
     proc,
     PerturbativeQED(),
-    TwoBodyTargetSystem(), # TODO: this  is probably wrong
+    TwoBodyTargetSystem(),
     tuple((rand(SFourMomentum) for _ in 1:number_incoming_particles(proc))...),
     tuple((rand(SFourMomentum) for _ in 1:number_outgoing_particles(proc))...),
 )
+
+# With the DAG, the process, `RuntimeGeneratedFunctions` initialized, and an input type to use
+# we can now generate the actual computable function:
+func = get_compute_function(
+    dag, proc, cpu_st(), @__MODULE__; concrete_input_type=typeof(psp)
+);
 
 # Finally, we can test that the function actually runs and computes something by
 # simply calling it on the `PhaseSpacePoint`:
 func(psp)
 
-# If we want, we can benchmark the execution speed too:
+# We can benchmark the execution speed too:
 using BenchmarkTools
 @benchmark func($psp)
