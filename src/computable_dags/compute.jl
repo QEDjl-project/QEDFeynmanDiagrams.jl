@@ -46,6 +46,10 @@ children(t::ComputeTask_SpinPolCumulation) = t.children
 struct BaseStateInput{PS_T<:AbstractParticleStateful,SPIN_POL_T<:AbstractSpinOrPolarization}
     particle::PS_T
     spin_pol::SPIN_POL_T
+
+    function BaseStateInput(ps::PS_T, spinpol::SPIN_POL_T) where {PS_T,SPIN_POL_T}
+        return new{PS_T,SPIN_POL_T}(ps, spinpol)
+    end
 end
 
 function compute(
@@ -71,6 +75,10 @@ end
 struct PropagatorInput{VP_T<:VirtualParticle,PSP_T<:AbstractPhaseSpacePoint}
     vp::VP_T
     psp::PSP_T
+
+    function PropagatorInput(vp::VP_T, psp::PSP_T) where {VP_T,PSP_T}
+        return new{VP_T,PSP_T}(vp, psp)
+    end
 end
 
 @inline _masked_sum(::Tuple{}, ::Tuple{}) = error("masked sum needs at least one argument")
@@ -88,7 +96,14 @@ end
 end
 
 function _vp_momentum(
-    vp::VirtualParticle{PROC,I,O}, psp::AbstractPhaseSpacePoint
+    vp::VirtualParticle{PROC,I,O}, psp::AbstractPhaseSpacePoint, ::Positron
+) where {PROC,I,O}
+    return -_masked_sum(momenta(psp, Incoming()), _in_contributions(vp)) +
+           _masked_sum(momenta(psp, Outgoing()), _out_contributions(vp))
+end
+
+function _vp_momentum(
+    vp::VirtualParticle{PROC,I,O}, psp::AbstractPhaseSpacePoint, ::AbstractParticleType
 ) where {PROC,I,O}
     return _masked_sum(momenta(psp, Incoming()), _in_contributions(vp)) -
            _masked_sum(momenta(psp, Outgoing()), _out_contributions(vp))
@@ -97,8 +112,8 @@ end
 function compute(
     ::ComputeTask_Propagator, input::PropagatorInput{VP_T,PSP_T}
 ) where {VP_T,PSP_T}
-    vp_mom = _vp_momentum(input.vp, input.psp)
     vp_species = particle_species(input.vp)
+    vp_mom = _vp_momentum(input.vp, input.psp, vp_species)
     inner = QEDbase.propagator(vp_species, vp_mom)
     return inner
 end
@@ -128,14 +143,14 @@ end
     photon::Propagated{Photon},
     electron::Propagated{Electron},
 )
-    return Unpropagated(Electron(), photon.value * VERTEX * electron.value) # photon - electron -> electron
+    return Unpropagated(Electron(), (photon.value * VERTEX) * electron.value) # photon - electron -> electron
 end
 @inline function compute( # photon, positron
     ::ComputeTask_Pair,
     photon::Propagated{Photon},
     positron::Propagated{Positron},
 )
-    return Unpropagated(Positron(), positron.value * VERTEX * photon.value) # photon - positron -> positron
+    return Unpropagated(Positron(), positron.value * (VERTEX * photon.value)) # photon - positron -> positron
 end
 @inline function compute( # electron, positron
     ::ComputeTask_Pair,
@@ -179,7 +194,7 @@ end
     electron::Propagated{Electron},
     positron::Propagated{Positron},
 )
-    return -1 * positron.value * (VERTEX * photon.value) * electron.value
+    return -1 * (positron.value * (VERTEX * photon.value) * electron.value)
 end
 
 # this compiles in a reasonable amount of time for up to about 1e4 parameters

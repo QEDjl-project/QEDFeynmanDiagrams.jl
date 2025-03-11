@@ -5,6 +5,7 @@ using QEDcore
 using QEDprocesses
 using ComputableDAGs
 using QEDFeynmanDiagrams
+using Logging
 
 using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
@@ -41,17 +42,13 @@ RNG = MersenneTwister(0)
     @test length(g_polx.nodes) == length(g_poly.nodes)
     @test length(g_polx.nodes) < length(g_synced.nodes) < 2 * length(g_polx.nodes)
 
-    f_synced = get_compute_function(g_synced, proc_synced, cpu_st(), @__MODULE__)
-    f_polx = get_compute_function(g_polx, proc_polx, cpu_st(), @__MODULE__)
-    f_poly = get_compute_function(g_poly, proc_poly, cpu_st(), @__MODULE__)
-
     inputs_synced = [gen_process_input(RNG, proc_synced) for _ in 1:1000]
     # have to cast these for their respective processes
     inputs_polx = [
         PhaseSpacePoint(
             proc_polx,
             model(psp),
-            phase_space_definition(psp),
+            phase_space_layout(psp),
             momenta(psp, Incoming()),
             momenta(psp, Outgoing()),
         ) for psp in inputs_synced
@@ -60,11 +57,22 @@ RNG = MersenneTwister(0)
         PhaseSpacePoint(
             proc_poly,
             model(psp),
-            phase_space_definition(psp),
+            phase_space_layout(psp),
             momenta(psp, Incoming()),
             momenta(psp, Outgoing()),
         ) for psp in inputs_synced
     ]
+
+    # suppress type inference warnings; they don't matter here
+    f_synced = with_logger(ConsoleLogger(Logging.Error)) do
+        get_compute_function(g_synced, proc_synced, cpu_st(), @__MODULE__)
+    end
+    f_polx = with_logger(ConsoleLogger(Logging.Error)) do
+        get_compute_function(g_polx, proc_polx, cpu_st(), @__MODULE__)
+    end
+    f_poly = with_logger(ConsoleLogger(Logging.Error)) do
+        get_compute_function(g_poly, proc_poly, cpu_st(), @__MODULE__)
+    end
 
     results_synced = f_synced.(inputs_synced)
     results_polx = f_polx.(inputs_polx)
@@ -106,10 +114,15 @@ GC.gc()
         @test length(graphs[1].nodes) == length(g.nodes)
     end
 
-    f_synced = get_compute_function(g_synced, proc_synced, cpu_st(), @__MODULE__)
-    functions = get_compute_function.(graphs, procs, Ref(cpu_st()), Ref(@__MODULE__))
-
     inputs_synced = [gen_process_input(RNG, proc_synced) for _ in 1:1000]
+
+    # suppress type inference warnings; they don't matter here
+    f_synced = with_logger(ConsoleLogger(Logging.Error)) do
+        get_compute_function(g_synced, proc_synced, cpu_st(), @__MODULE__)
+    end
+    functions = with_logger(ConsoleLogger(Logging.Error)) do
+        get_compute_function.(graphs, procs, Ref(cpu_st()), Ref(@__MODULE__))
+    end
 
     # have to cast these for their respective processes
     inputs_unsynced = Vector{PhaseSpacePoint}[]
@@ -120,7 +133,7 @@ GC.gc()
                 PhaseSpacePoint(
                     p,
                     model(psp),
-                    phase_space_definition(psp),
+                    phase_space_layout(psp),
                     momenta(psp, Incoming()),
                     momenta(psp, Outgoing()),
                 ) for psp in inputs_synced
