@@ -18,11 +18,14 @@ n = 4;
 # Now we setup the scattering process accordingly. We consider all spin/polarization
 # combinations of the particles except for the incoming photons, where the polarizations are synced using [`QEDbase.SyncedPolarization`](@extref). 
 # This emulates all synced photons having the same, but still indefinite, polarization, for example from a laser.
+# !!! note
+#     Currently, this process uses outgoing photons instead of incoming photons, because there is not yet a
+#     `PhaseSpaceLayout` for more than two incoming particles in QEDcore.jl. See issue https://github.com/QEDjl-project/QEDcore.jl/issues/103
 proc = ScatteringProcess(
-    (Electron(), ntuple(_ -> Photon(), n)...),     # incoming particles
-    (Electron(), Photon()),                        # outgoing particles
-    (AllSpin(), ntuple(_ -> SyncedPol(1), n)...),  # incoming particle spin/pols
-    (AllSpin(), AllPol()),                         # outgoing particle spin/pols
+    (Electron(), Photon()),                        # incoming particles
+    (Electron(), ntuple(_ -> Photon(), n)...),     # outgoing particles
+    (AllSpin(), AllPol()),                         # incoming particle spin/pols
+    (AllSpin(), ntuple(_ -> SyncedPol(1), n)...),  # outgoing particle spin/pols
 )
 
 # The [`number_of_diagrams`](@ref) function returns how many diagrams there are for a given process.
@@ -52,7 +55,7 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 psp = PhaseSpacePoint(
     proc,
     PerturbativeQED(),
-    TwoBodyTargetSystem(),
+    FlatPhaseSpaceLayout(TwoBodyRestSystem()),
     tuple((rand(SFourMomentum) for _ in 1:number_incoming_particles(proc))...),
     tuple((rand(SFourMomentum) for _ in 1:number_outgoing_particles(proc))...),
 )

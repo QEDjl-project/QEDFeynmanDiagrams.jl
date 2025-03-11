@@ -16,7 +16,7 @@ include("utils.jl")
 RNG = MersenneTwister(0)
 PROC = ScatteringProcess((Electron(), Photon()), (Electron(), Photon(), Photon()))
 MODEL = PerturbativeQED()
-INPSL = TwoBodyTargetSystem()
+INPSL = FlatPhaseSpaceLayout(TwoBodyRestSystem())
 
 include("impl/compton.jl")
 

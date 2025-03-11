@@ -46,7 +46,7 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 psp = PhaseSpacePoint(
     proc,
     PerturbativeQED(),
-    TwoBodyTargetSystem(),
+    FlatPhaseSpaceLayout(TwoBodyRestSystem()),
     tuple((rand(SFourMomentum) for _ in 1:number_incoming_particles(proc))...),
     tuple((rand(SFourMomentum) for _ in 1:number_outgoing_particles(proc))...),
 )
