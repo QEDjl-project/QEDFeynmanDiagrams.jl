@@ -1,8 +1,8 @@
 # file for testing that synced spins and polarizations are handled correctly
 
 using Random
+using QEDbase.Mocks: MockProcessSP
 using QEDcore
-using QEDprocesses
 using ComputableDAGs
 using QEDFeynmanDiagrams
 using Logging
@@ -15,20 +15,20 @@ include("utils.jl")
 RNG = MersenneTwister(0)
 
 @testset "Compton-like process with $n incoming photons" for n in (1, 2, 3)
-    proc_synced = ScatteringProcess(
+    proc_synced = MockProcessSP(
         (Electron(), ntuple(_ -> Photon(), n)...),
         (Electron(), Photon()),
         (AllSpin(), ntuple(_ -> SyncedPol(1), n)...),
         (AllSpin(), AllPol()),
     )
 
-    proc_polx = ScatteringProcess(
+    proc_polx = MockProcessSP(
         (Electron(), ntuple(_ -> Photon(), n)...),
         (Electron(), Photon()),
         (AllSpin(), ntuple(_ -> PolX(), n)...),
         (AllSpin(), AllPol()),
     )
-    proc_poly = ScatteringProcess(
+    proc_poly = MockProcessSP(
         (Electron(), ntuple(_ -> Photon(), n)...),
         (Electron(), Photon()),
         (AllSpin(), ntuple(_ -> PolY(), n)...),
@@ -86,7 +86,7 @@ GC.gc()
 
 @testset "Trident-like process with $n produced pairs" for n in (1, 2)
     # sync the positrons and the electrons with each other, across input and output
-    proc_synced = ScatteringProcess(
+    proc_synced = MockProcessSP(
         (Electron(), Photon()),
         (Electron(), ntuple(_ -> Electron(), n)..., ntuple(_ -> Positron(), n)...),
         (SyncedSpin(1), PolX()),
@@ -94,11 +94,11 @@ GC.gc()
     )
 
     # this gives 4 combinations: up-up, up-down, down-up, and down-down
-    procs = ScatteringProcess[]
+    procs = MockProcessSP[]
     for (spin1, spin2) in Iterators.product((SpinUp(), SpinDown()), (SpinUp(), SpinDown()))
         push!(
             procs,
-            ScatteringProcess(
+            MockProcessSP(
                 (Electron(), Photon()),
                 (Electron(), ntuple(_ -> Electron(), n)..., ntuple(_ -> Positron(), n)...),
                 (spin1, PolX()),

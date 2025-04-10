@@ -1,4 +1,5 @@
 using Random
+using QEDbase.Mocks
 using QEDcore
 
 # for a process definition, generate a random phase space point for the given process
@@ -26,7 +27,7 @@ function gen_process_input(rng::AbstractRNG, proc::AbstractProcessDefinition)
 
     return PhaseSpacePoint(
         proc,
-        PerturbativeQED(),
+        MockModel(),
         FlatPhaseSpaceLayout(TwoBodyRestSystem()),
         in_momenta,
         out_momenta,

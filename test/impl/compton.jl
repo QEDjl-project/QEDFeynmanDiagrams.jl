@@ -1,7 +1,8 @@
 using Combinatorics
 using QEDFeynmanDiagrams
+using QEDcore
 
-VERTEX = QEDFeynmanDiagrams.VERTEX
+using QEDFeynmanDiagrams: VERTEX
 
 function assert_compton(proc::AbstractProcessDefinition)
     @assert number_particles(proc, Incoming(), Electron()) == 1 "there should be exactly one incoming electron"

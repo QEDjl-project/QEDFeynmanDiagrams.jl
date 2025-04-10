@@ -1,8 +1,8 @@
 # file for testing that fermion exchange negation is handled correctly
 
 using Random
+using QEDbase.Mocks
 using QEDcore
-using QEDprocesses
 using ComputableDAGs
 using QEDFeynmanDiagrams
 
@@ -14,8 +14,8 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 include("utils.jl")
 
 RNG = MersenneTwister(0)
-PROC = ScatteringProcess((Electron(), Photon()), (Electron(), Photon(), Photon()))
-MODEL = PerturbativeQED()
+PROC = MockProcess((Electron(), Photon()), (Electron(), Photon(), Photon()))
+MODEL = MockModel()
 INPSL = FlatPhaseSpaceLayout(TwoBodyRestSystem())
 
 include("impl/compton.jl")
