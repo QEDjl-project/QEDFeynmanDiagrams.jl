@@ -1,11 +1,11 @@
-name: Build and deploy documentation
+name: Build and Deploy Documentation
 
 on:
   push:
     branches:
       - main
       - dev
-    tags: '*'
+    tags: "*"
   pull_request:
 
 jobs:
@@ -15,6 +15,14 @@ jobs:
       statuses: write
     runs-on: ubuntu-latest
     steps:
-      - uses: QEDjl-project/gh-actions/build-docs@v1
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          version: "1.10"
+      - name: Install dependencies
+        run: |
+          julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      - name: Build and deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # If authenticating with GitHub Actions token
+        run: julia --project=docs/ docs/make.jl
