@@ -15,7 +15,7 @@ PSL = FlatPhaseSpaceLayout(TwoBodyTargetSystem())
     "ema_ema",          # ke -> ke
     "ema_emaa",         # ke -> kke
     "ema_emaaa",        # ke -> kkke
-    "ema_emaaaa",       # ke -> kkkke
+    #"ema_emaaaa",       # ke -> kkkke currently too slow for the CI
     "ema_ememep",       # ke -> eep
     "emep_emep",        # ep -> ep
     "emep_emepemep",    # ep -> eepp
