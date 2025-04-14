@@ -53,21 +53,21 @@ end
     # have to cast these for their respective processes
     inputs_polx = [
         PhaseSpacePoint(
-            proc_polx,
-            model(psp),
-            phase_space_layout(psp),
-            momenta(psp, Incoming()),
-            momenta(psp, Outgoing()),
-        ) for psp in inputs_synced
+                proc_polx,
+                model(psp),
+                phase_space_layout(psp),
+                momenta(psp, Incoming()),
+                momenta(psp, Outgoing()),
+            ) for psp in inputs_synced
     ]
     inputs_poly = [
         PhaseSpacePoint(
-            proc_poly,
-            model(psp),
-            phase_space_layout(psp),
-            momenta(psp, Incoming()),
-            momenta(psp, Outgoing()),
-        ) for psp in inputs_synced
+                proc_poly,
+                model(psp),
+                phase_space_layout(psp),
+                momenta(psp, Incoming()),
+                momenta(psp, Outgoing()),
+            ) for psp in inputs_synced
     ]
 
     # suppress type inference warnings; they don't matter here
@@ -144,12 +144,12 @@ end
             inputs_unsynced,
             [
                 PhaseSpacePoint(
-                    p,
-                    model(psp),
-                    phase_space_layout(psp),
-                    momenta(psp, Incoming()),
-                    momenta(psp, Outgoing()),
-                ) for psp in inputs_synced
+                        p,
+                        model(psp),
+                        phase_space_layout(psp),
+                        momenta(psp, Incoming()),
+                        momenta(psp, Outgoing()),
+                    ) for psp in inputs_synced
             ],
         )
     end

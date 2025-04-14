@@ -7,21 +7,21 @@ using QEDFeynmanDiagrams: VERTEX
 function assert_compton(proc::AbstractProcessDefinition)
     @assert number_particles(proc, Incoming(), Electron()) == 1 "there should be exactly one incoming electron"
     @assert number_particles(proc, Outgoing(), Electron()) == 1 "there should be exactly one outgoing electron"
-    @assert number_particles(proc, Incoming(), Photon()) +
-            number_particles(proc, Outgoing(), Photon()) +
-            2 == number_particles(proc, Incoming()) + number_particles(proc, Outgoing()) "there should only be an incoming and outgoing electron, and photons"
+    return @assert number_particles(proc, Incoming(), Photon()) +
+        number_particles(proc, Outgoing(), Photon()) +
+        2 == number_particles(proc, Incoming()) + number_particles(proc, Outgoing()) "there should only be an incoming and outgoing electron, and photons"
 end
 
 function two_compton_diagram(
-    in_el, out_el, ph_1, ph_2, ph_3, in_el_s, out_el_s, ph_1_p, ph_2_p, ph_3_p
-)
+        in_el, out_el, ph_1, ph_2, ph_3, in_el_s, out_el_s, ph_1_p, ph_2_p, ph_3_p
+    )
     return base_state(Electron(), Outgoing(), -out_el, out_el_s) *
-           (base_state(Photon(), Incoming(), ph_3, ph_3_p) * VERTEX) *
-           propagator(Electron(), -out_el - ph_3) *
-           (base_state(Photon(), Incoming(), ph_2, ph_2_p) * VERTEX) *
-           propagator(Electron(), -out_el - ph_2 - ph_3) *
-           (base_state(Photon(), Incoming(), ph_1, ph_1_p) * VERTEX) *
-           base_state(Electron(), Incoming(), in_el, in_el_s)
+        (base_state(Photon(), Incoming(), ph_3, ph_3_p) * VERTEX) *
+        propagator(Electron(), -out_el - ph_3) *
+        (base_state(Photon(), Incoming(), ph_2, ph_2_p) * VERTEX) *
+        propagator(Electron(), -out_el - ph_2 - ph_3) *
+        (base_state(Photon(), Incoming(), ph_1, ph_1_p) * VERTEX) *
+        base_state(Electron(), Incoming(), in_el, in_el_s)
 end
 
 function two_compton_spin_pol_comb(psp, spin_pols)

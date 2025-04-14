@@ -2,7 +2,7 @@ using Pkg
 using QEDFeynmanDiagrams
 
 project_path = Base.Filesystem.joinpath(Base.Filesystem.dirname(Base.source_path()), "..")
-Pkg.develop(; path=project_path)
+Pkg.develop(; path = project_path)
 
 using Documenter
 using DocumenterInterLinks
@@ -30,7 +30,7 @@ literate_paths = [
 ]
 
 for (file, output_dir) in literate_paths
-    Literate.markdown(file, output_dir; documenter=true)
+    Literate.markdown(file, output_dir; documenter = true)
     Literate.notebook(file, output_dir)
 end
 
@@ -43,17 +43,17 @@ pages = [
 ]
 
 makedocs(;
-    modules=[QEDFeynmanDiagrams],
-    checkdocs=:exports,
-    authors="Anton Reinhard",
-    repo=Documenter.Remotes.GitHub("QEDjl-project", "QEDFeynmanDiagrams.jl"),
-    sitename="QEDFeynmanDiagrams.jl",
-    format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://QEDjl-project.github.io/QEDFeynmanDiagrams.jl",
-        assets=String[],
+    modules = [QEDFeynmanDiagrams],
+    checkdocs = :exports,
+    authors = "Anton Reinhard",
+    repo = Documenter.Remotes.GitHub("QEDjl-project", "QEDFeynmanDiagrams.jl"),
+    sitename = "QEDFeynmanDiagrams.jl",
+    format = Documenter.HTML(;
+        prettyurls = get(ENV, "CI", "false") == "true",
+        canonical = "https://QEDjl-project.github.io/QEDFeynmanDiagrams.jl",
+        assets = String[],
     ),
-    pages=pages,
-    plugins=[links],
+    pages = pages,
+    plugins = [links],
 )
-deploydocs(; repo="github.com/QEDjl-project/QEDFeynmanDiagrams.jl.git", push_preview=false)
+deploydocs(; repo = "github.com/QEDjl-project/QEDFeynmanDiagrams.jl.git", push_preview = false)

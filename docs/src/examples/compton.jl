@@ -18,7 +18,7 @@ using QEDbase.Mocks
 n = 4;
 
 # Now we setup the scattering process accordingly. We consider all spin/polarization
-# combinations of the particles except for the incoming photons, where the polarizations are synced using [`QEDbase.SyncedPolarization`](@extref). 
+# combinations of the particles except for the incoming photons, where the polarizations are synced using [`QEDbase.SyncedPolarization`](@extref).
 # This emulates all synced photons having the same, but still indefinite, polarization, for example from a laser.
 # !!! note
 #     Currently, this process uses outgoing photons instead of incoming photons, because there is not yet a
@@ -44,7 +44,7 @@ dag = graph(proc)
 # multiple spin and polarization combinations. This is the result of efficient
 # reuse of reappearing parts of Feynman diagrams.
 
-# To continue, we will need [`ComputableDAGs.jl`](https://github.com/ComputableDAGs/ComputableDAGs.jl). Since `ComputableDAGs.jl` uses 
+# To continue, we will need [`ComputableDAGs.jl`](https://github.com/ComputableDAGs/ComputableDAGs.jl). Since `ComputableDAGs.jl` uses
 # `RuntimeGeneratedFunction`s as the return type of [`ComputableDAGs.get_compute_function`](@extref), we need
 # to initialize it in our current module.
 using ComputableDAGs
@@ -65,7 +65,7 @@ psp = PhaseSpacePoint(
 # With the DAG, the process, `RuntimeGeneratedFunctions` initialized, and an input type to use,
 # we can now generate the actual computable function:
 func = get_compute_function(
-    dag, proc, cpu_st(), @__MODULE__; concrete_input_type=typeof(psp)
+    dag, proc, cpu_st(), @__MODULE__; concrete_input_type = typeof(psp)
 );
 
 # Finally, we can test that the function actually runs and computes something by
