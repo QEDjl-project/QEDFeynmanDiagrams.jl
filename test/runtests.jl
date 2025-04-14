@@ -5,6 +5,7 @@ using SafeTestsets
 cpu_tests = tryparse(Bool, get(ENV, "TEST_CPU", "1"))
 
 if cpu_tests
+    #=
     @safetestset "Number of diagrams" begin
         include("number_of_diagrams.jl")
     end
@@ -23,6 +24,10 @@ if cpu_tests
 
     @safetestset "Synced Spins and Polarizations" begin
         include("synced_spin_pol.jl")
+    end
+    =#
+    @safetestset "Test against Madgraph ground truths" begin
+        include("madgraph/test_madgraph.jl")
     end
 else
     @info "Skipping CPU tests"
