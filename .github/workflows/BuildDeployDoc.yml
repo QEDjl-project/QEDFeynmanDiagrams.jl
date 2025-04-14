@@ -1,11 +1,11 @@
-name: Build and Deploy Documentation
+name: Build and deploy documentation
 
 on:
   push:
     branches:
       - main
       - dev
-    tags: "*"
+    tags: '*'
   pull_request:
 
 jobs:
@@ -15,15 +15,6 @@ jobs:
       statuses: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v1
+      - uses: QEDjl-project/gh-actions/build-docs@v1
         with:
-          version: "1.10"
-      - name: Install dependencies # TODO: currently needs dev versions of QEDbase and QEDprocesses, remove once they are released again
-        run: |
-          julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-          julia --project=docs/ ./add_QED_dev.jl
-      - name: Build and deploy
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # If authenticating with GitHub Actions token
-        run: julia --project=docs/ docs/make.jl
+          github-token: ${{ secrets.GITHUB_TOKEN }}
