@@ -7,10 +7,12 @@
 
 using QEDFeynmanDiagrams
 
-# We need some of the packages of the [QEDjl-project](https://github.com/QEDjl-project) for base
-# functionality and the `ScatteringProcess` type.
+# We need QEDcore of the [QEDjl-project](https://github.com/QEDjl-project) for base
+# functionality and a process type, for which we can use the `Mocks` submodule
+# from QEDbase for this tutorial. Downstream, a `ScatteringProcess` from QEDprocesses.jl
+# could be used, for example.
 using QEDcore
-using QEDprocesses
+using QEDbase.Mocks
 
 # Let's decide how many pairs our trident should produce:
 n = 2;
@@ -18,7 +20,7 @@ n = 2;
 # Now we setup the scattering process accordingly. We only consider a single spin/polarization
 # combination here. For an example with many spin and polarization combinations, refer to the
 # [n-photon Compton example](compton.md)
-proc = ScatteringProcess(
+proc = QEDbase.Mocks.MockProcessSP(
     (Electron(), Photon()),                                                         # incoming particles
     (Electron(), ntuple(_ -> Electron(), n)..., ntuple(_ -> Positron(), n)...),     # outgoing particles
     (SpinUp(), PolX()),                                                             # incoming particle spin/pols
@@ -45,7 +47,7 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 # will be able to generate physical `PhaseSpacePoint`s.
 psp = PhaseSpacePoint(
     proc,
-    PerturbativeQED(),
+    MockModel(),
     FlatPhaseSpaceLayout(TwoBodyRestSystem()),
     tuple((rand(SFourMomentum) for _ in 1:number_incoming_particles(proc))...),
     tuple((rand(SFourMomentum) for _ in 1:number_outgoing_particles(proc))...),

@@ -7,10 +7,12 @@
 
 using QEDFeynmanDiagrams
 
-# We need some of the packages of the [QEDjl-project](https://github.com/QEDjl-project) for base
-# functionality and the `ScatteringProcess` type.
+# We need QEDcore of the [QEDjl-project](https://github.com/QEDjl-project) for base
+# functionality and a process type, for which we can use the `Mocks` submodule
+# from QEDbase for this tutorial. Downstream, a `ScatteringProcess` from QEDprocesses.jl
+# could be used, for example.
 using QEDcore
-using QEDprocesses
+using QEDbase.Mocks
 
 # Let's decide how many photons our electron interacts with:
 n = 4;
@@ -21,7 +23,7 @@ n = 4;
 # !!! note
 #     Currently, this process uses outgoing photons instead of incoming photons, because there is not yet a
 #     `PhaseSpaceLayout` for more than two incoming particles in QEDcore.jl. See issue https://github.com/QEDjl-project/QEDcore.jl/issues/103
-proc = ScatteringProcess(
+proc = QEDbase.Mocks.MockProcessSP(
     (Electron(), Photon()),                        # incoming particles
     (Electron(), ntuple(_ -> Photon(), n)...),     # outgoing particles
     (AllSpin(), AllPol()),                         # incoming particle spin/pols
@@ -54,7 +56,7 @@ RuntimeGeneratedFunctions.init(@__MODULE__)
 # will be able to generate physical `PhaseSpacePoint`s.
 psp = PhaseSpacePoint(
     proc,
-    PerturbativeQED(),
+    MockModel(),
     FlatPhaseSpaceLayout(TwoBodyRestSystem()),
     tuple((rand(SFourMomentum) for _ in 1:number_incoming_particles(proc))...),
     tuple((rand(SFourMomentum) for _ in 1:number_outgoing_particles(proc))...),
