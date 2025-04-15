@@ -91,7 +91,6 @@ end
 # make sure we're not keeping all these graphs in memory
 GC.gc()
 
-
 Ns = if LARGE_TESTS()
     (1, 2)
 else

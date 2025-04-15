@@ -1,0 +1,20 @@
+{
+    "creators": [
+        {
+            "name": "Reinhard, Anton",
+            "affiliation": "Helmholtz-Zentrum Dresden-Rossendorf, CASUS",
+            "orcid": "0009-0004-6483-2137"
+        },
+        {
+            "name": "Hernandez Acosta, Uwe",
+            "affiliation": "Helmholtz-Zentrum Dresden-Rossendorf, CASUS",
+            "orcid": "0000-0002-6182-1481"
+        }
+    ],
+    "title": "QEDFeynmanDiagrams.jl",
+    "access_right": "open",
+    "upload_type": "software",
+    "license": "MIT",
+    "pub_id": "41226",
+    "description": "Generator for QED Feynman diagrams and ComputableDAGs.jl to compute scattering processes' matrix elements."
+}
