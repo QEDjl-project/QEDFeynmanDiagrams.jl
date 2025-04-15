@@ -1,7 +1,10 @@
-using QEDprocesses
+using Combinatorics
+using QEDFeynmanDiagrams
 using QEDcore
 
-bhabha = ScatteringProcess(
+using QEDFeynmanDiagrams: VERTEX
+
+bhabha = Mocks.MockProcessSP(
     (Electron(), Positron()),
     (Electron(), Positron()),
     (AllSpin(), AllSpin()),
@@ -10,8 +13,20 @@ bhabha = ScatteringProcess(
 
 BHABHA = typeof(bhabha)
 
+function assert_bhabha(proc::AbstractProcessDefinition)
+    @assert number_particles(proc, Incoming(), Electron()) == 1 "there should be exactly one incoming electron"
+    @assert number_particles(proc, Outgoing(), Electron()) == 1 "there should be exactly one outgoing electron"
+    @assert number_particles(proc, Incoming(), Positron()) == 1 "there should be exactly one incoming positron"
+    @assert number_particles(proc, Outgoing(), Positron()) == 1 "there should be exactly one outgoing positron"
+    @assert number_particles(proc, Incoming(), Photon()) == 0 "there should be zero incoming photons"
+    @assert number_particles(proc, Outgoing(), Photon()) == 0 "there should be zero outgoing photons"
+    return nothing
+end
+
 # ground truth for ep -> ep
-function _ground_truth_bhabha(psp::PhaseSpacePoint{BHABHA,PerturbativeQED})
+function _ground_truth_bhabha(psp::PhaseSpacePoint)
+    assert_bhabha(process(psp))
+
     e_i = psp[Incoming(), 1]
     e_o = psp[Outgoing(), 1]
     p_i = psp[Incoming(), 2]

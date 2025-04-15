@@ -1,6 +1,6 @@
 name = "QEDFeynmanDiagrams"
 uuid = "3232ad24-8ec1-4588-843e-e2ed2eae1ff3"
-authors = ["AntonReinhard <a.reinhard@hzdr.de>", "Uwe Hernandez Acosta <u.hernandez@hzdr.de>"]
+authors = ["AntonReinhard <a.reinhard@hzdr.de>", "Uwe Hernandez Acosta"]
 version = "0.1.0"
 
 [deps]
@@ -15,7 +15,7 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 
 [compat]
 Combinatorics = "1"
-ComputableDAGs = "0.2"
+ComputableDAGs = "0.2.1"
 DataStructures = "0.18"
 LRUCache = "1"
 Logging = "1.10"
@@ -27,11 +27,11 @@ julia = "1.10"
 
 [extras]
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
-QEDprocesses = "46de9c38-1bb3-4547-a1ec-da24d767fdad"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["SafeTestsets", "Test", "Logging", "Random", "QEDprocesses", "RuntimeGeneratedFunctions"]
+test = ["SafeTestsets", "Test", "Pkg", "Logging", "Random", "RuntimeGeneratedFunctions"]

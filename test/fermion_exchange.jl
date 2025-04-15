@@ -2,7 +2,7 @@
 
 using Random
 using QEDcore
-using QEDprocesses
+using QEDbase.Mocks
 using ComputableDAGs
 using QEDFeynmanDiagrams
 
@@ -10,8 +10,6 @@ using Logging
 
 using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
-
-VERTEX = QEDFeynmanDiagrams.VERTEX
 
 include("utils.jl")
 include("impl/bhabha.jl")
@@ -21,6 +19,8 @@ RNG = MersenneTwister(0)
 @testset "Bhabha Scattering ep -> ep" begin
     g = graph(bhabha)
     # suppress type inference warnings; they don't matter here
+    # they arise because the MockProcess isn't very type stable in its interface implementation
+    # that leads to this being slow, but it's only mocking/testing, so that is okay
     f = with_logger(ConsoleLogger(Logging.Error)) do
         get_compute_function(g, bhabha, cpu_st(), @__MODULE__)
     end

@@ -2,7 +2,7 @@
 
 using Random
 using QEDcore
-using QEDprocesses
+using QEDbase.Mocks
 using ComputableDAGs
 using QEDFeynmanDiagrams
 
@@ -14,7 +14,7 @@ include("utils.jl")
 RNG = MersenneTwister(0)
 
 @testset "Compton-like process with $n incoming photons" for n in (1, 2, 3, 4)
-    proc = ScatteringProcess(
+    proc = Mocks.MockProcessSP(
         (Electron(), ntuple(_ -> Photon(), n)...),
         (Electron(), Photon()),
         (AllSpin(), ntuple(_ -> PolX(), n)...),
@@ -22,7 +22,7 @@ RNG = MersenneTwister(0)
     )
 
     for n_other in (1, 2, 3, 4)
-        n_other_proc = ScatteringProcess(
+        n_other_proc = Mocks.MockProcessSP(
             (Electron(), ntuple(_ -> Photon(), n_other)...),
             (Electron(), Photon()),
             (AllSpin(), ntuple(_ -> PolX(), n_other)...),
