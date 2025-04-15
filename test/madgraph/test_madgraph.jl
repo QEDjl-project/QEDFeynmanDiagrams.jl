@@ -11,15 +11,29 @@ RNG = MersenneTwister(137)
 MODEL = MockModel()
 PSL = FlatPhaseSpaceLayout(TwoBodyTargetSystem())
 
-@testset "Testing Madgraph process $proc" for proc in [
-    "ema_ema",          # ke -> ke
-    "ema_emaa",         # ke -> kke
-    "ema_emaaa",        # ke -> kkke
-    #"ema_emaaaa",       # ke -> kkkke currently too slow for the CI
-    "ema_ememep",       # ke -> eep
-    "emep_emep",        # ep -> ep
-    "emep_emepemep",    # ep -> eepp
-]
+include("../utils.jl")
+
+TEST_PROCESSES = if LARGE_TESTS()
+    [
+        "ema_ema",          # ke -> ke
+        "emep_emep",        # ep -> ep
+        "ema_emaa",         # ke -> kke
+        "ema_ememep",       # ke -> eep
+        "emep_emepemep",    # ep -> eepp
+        "ema_emaaa",        # ke -> kkke
+        "ema_emaaaa",       # ke -> kkkke
+    ]
+else
+    @info "Skipping large tests...\nEnable them explicitly with an environment variable LARGE_TESTS=1"
+    [
+        "ema_ema",          # ke -> ke
+        "emep_emep",        # ep -> ep
+        "ema_emaa",         # ke -> kke
+        "ema_ememep",       # ke -> eep
+    ]
+end
+
+@testset "Testing Madgraph process $proc" for proc in TEST_PROCESSES
     include("$proc/setup.jl")
     GRAPH = graph(PROC)
 

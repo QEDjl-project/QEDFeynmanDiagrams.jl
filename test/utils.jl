@@ -46,3 +46,15 @@ function rand_mom(rng::AbstractRNG, pt::AbstractParticleType)
     E2 = x^2 + y^2 + z^2 + mass(pt)^2
     return SFourMomentum(sqrt(E2), x, y, z)
 end
+
+function LARGE_TESTS()
+    # if LARGE_TESTS is set to 0 or 1, use that to decide
+    LT = get(ENV, "LARGE_TESTS", "CI")
+
+    if LT == "CI"
+        # by default, run large tests locally but not in CI
+        return !tryparse(Bool, get(ENV, "CI", "0"))
+    else
+        return tryparse(Bool, LT)
+    end
+end
