@@ -1,6 +1,6 @@
 name = "QEDFeynmanDiagrams"
 uuid = "3232ad24-8ec1-4588-843e-e2ed2eae1ff3"
-authors = ["AntonReinhard <a.reinhard@hzdr.de>", "Uwe Hernandez Acosta <u.hernandez@hzdr.de>"]
+authors = ["AntonReinhard <a.reinhard@hzdr.de>", "Uwe Hernandez Acosta"]
 version = "0.1.0"
 
 [deps]

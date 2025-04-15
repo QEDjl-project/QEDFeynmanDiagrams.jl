@@ -9,6 +9,16 @@
             "name": "Hernandez Acosta, Uwe",
             "affiliation": "Helmholtz-Zentrum Dresden-Rossendorf, CASUS",
             "orcid": "0000-0002-6182-1481"
+        },
+        {
+            "name": "Ehrig, Simeon",
+            "affiliation": "Helmholtz-Zentrum Dresden-Rossendorf, CASUS",
+            "orcid": "0000-0002-8218-3116"
+        },
+        {
+            "name": "Bussmann, Michael",
+            "affiliation": "Helmholtz-Zentrum Dresden-Rossendorf, CASUS",
+            "orcid": "0000-0002-8258-3881"
         }
     ],
     "title": "QEDFeynmanDiagrams.jl",
