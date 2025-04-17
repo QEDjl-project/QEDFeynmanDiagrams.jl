@@ -35,7 +35,7 @@ number_of_diagrams(proc)
 # squared matrix element. This uses `ComputableDAGs.jl`.
 dag = graph(proc)
 
-# To continue, we will need [`ComputableDAGs.jl`](https://github.com/ComputableDAGs/ComputableDAGs.jl). Since `ComputableDAGs.jl` uses 
+# To continue, we will need [`ComputableDAGs.jl`](https://github.com/ComputableDAGs/ComputableDAGs.jl). Since `ComputableDAGs.jl` uses
 # `RuntimeGeneratedFunction`s as the return type of [`ComputableDAGs.get_compute_function`](@extref), we need
 # to initialize it in our current module.
 using ComputableDAGs
@@ -56,7 +56,7 @@ psp = PhaseSpacePoint(
 # With the DAG, the process, `RuntimeGeneratedFunctions` initialized, and an input type to use
 # we can now generate the actual computable function:
 func = get_compute_function(
-    dag, proc, cpu_st(), @__MODULE__; concrete_input_type=typeof(psp)
+    dag, proc, cpu_st(), @__MODULE__; concrete_input_type = typeof(psp)
 );
 
 # Finally, we can test that the function actually runs and computes something by

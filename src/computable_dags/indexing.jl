@@ -4,8 +4,8 @@
 Returns a tuple of a symbol which is either `:left` or `:right` in the case of fermions, and `:boson`, in the case of a boson, and an `Int` giving the index of the particle.
 """
 function _get_canonical_index(
-    proc::AbstractProcessDefinition, dir::ParticleDirection, index::Int
-)
+        proc::AbstractProcessDefinition, dir::ParticleDirection, index::Int
+    )
     species = particles(proc, dir)[index]
     species_index = _species_index(proc, dir, species, index)
 
@@ -28,11 +28,11 @@ function _get_canonical_index(
 end
 
 function _species_index(
-    proc::AbstractProcessDefinition,
-    dir::ParticleDirection,
-    species::AbstractParticleType,
-    n::Int,
-)
+        proc::AbstractProcessDefinition,
+        dir::ParticleDirection,
+        species::AbstractParticleType,
+        n::Int,
+    )
     # find particle index of n-th particle of *this species and dir*
     species_index = 0
     for i in 1:n
@@ -45,11 +45,11 @@ function _species_index(
 end
 
 function _total_index(
-    proc::AbstractProcessDefinition,
-    dir::ParticleDirection,
-    species::AbstractParticleType,
-    n::Int,
-)
+        proc::AbstractProcessDefinition,
+        dir::ParticleDirection,
+        species::AbstractParticleType,
+        n::Int,
+    )
     # find particle index of all particles given n-th particle of dir and species (inverse of _species_index)
     total_index = 0
     species_count = 0
@@ -70,7 +70,7 @@ function _total_index(
     throw("did not find $n-th $dir $species")
 end
 
-function _canonical_index(vp::VP) where {VP<:VirtualParticle}
+function _canonical_index(vp::VP) where {VP <: VirtualParticle}
     @assert vp.species != Photon "canonical index is only for (anti-)fermions"
     (left_ferms, right_ferms) = _canonical_fermion_indices(vp)
 
@@ -94,13 +94,13 @@ function _canonical_index(vp::VP) where {VP<:VirtualParticle}
     end
 end
 
-function _canonical_fermion_indices(vp::VP) where {VP<:VirtualParticle}
+function _canonical_fermion_indices(vp::VP) where {VP <: VirtualParticle}
     left_ferms = Int[]
     right_ferms = Int[]
     for (contribs, dir) in Iterators.zip(
-        (vp.in_particle_contributions, vp.out_particle_contributions),
-        (Incoming(), Outgoing()),
-    )
+            (vp.in_particle_contributions, vp.out_particle_contributions),
+            (Incoming(), Outgoing()),
+        )
         c = 0
         for contrib in contribs
             c += 1

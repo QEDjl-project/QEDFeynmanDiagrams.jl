@@ -2,7 +2,7 @@
 
 ## Usage
 
-!!! note 
+!!! note
     This project uses [ComputableDAGs.jl](https://github.com/ComputableDAGs/ComputableDAGs.jl), which uses [RuntimeGeneratedFunctions.jl](https://github.com/SciML/RuntimeGeneratedFunctions.jl). The latter requires an initialization step, so when using this project, make sure to have
     ```julia
     using RuntimeGeneratedFunctions

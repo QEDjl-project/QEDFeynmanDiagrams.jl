@@ -47,11 +47,11 @@ function _parse_particle(name::String)
 end
 
 function spin_or_pol(
-    process::AbstractProcessDefinition,
-    dir::ParticleDirection,
-    species::AbstractParticleType,
-    n::Int,
-)
+        process::AbstractProcessDefinition,
+        dir::ParticleDirection,
+        species::AbstractParticleType,
+        n::Int,
+    )
     i = 0
     c = n
     for p in particles(process, dir)
@@ -76,8 +76,8 @@ function spin_or_pol(
 end
 
 function ComputableDAGs.input_expr(
-    proc::AbstractProcessDefinition, name::String, psp_symbol::Symbol
-)
+        proc::AbstractProcessDefinition, name::String, psp_symbol::Symbol
+    )
     if startswith(name, "bs_")
         (dir, species, spin_pol, index) = _parse_particle(name[4:end])
         dir_str = _construction_string(dir)
@@ -114,10 +114,10 @@ end
 
 # function assembling the correct type information for the tuple of ParticleStatefuls in a phasespace point for input_type
 @inline function _assemble_input_type(
-    particle_types::Tuple{SPECIES_T,Vararg{AbstractParticleType}}, dir::DIR_T
-) where {SPECIES_T<:AbstractParticleType,DIR_T<:ParticleDirection}
+        particle_types::Tuple{SPECIES_T, Vararg{AbstractParticleType}}, dir::DIR_T
+    ) where {SPECIES_T <: AbstractParticleType, DIR_T <: ParticleDirection}
     return (
-        AbstractParticleStateful{DIR_T,SPECIES_T},
+        AbstractParticleStateful{DIR_T, SPECIES_T},
         _assemble_input_type(particle_types[2:end], dir)...,
     )
 end
@@ -185,16 +185,18 @@ function _parse_node_names(name1::String, name2::String)
 
     return tuple(
         # TODO: could use merge sort since the sub lists are sorted already
-        sort([
-            tuple.(
-                parse.(Int, getindex.(split_strings_1, 1)),
-                parse.(AbstractSpinOrPolarization, getindex.(split_strings_1, 2)),
-            )...,
-            tuple.(
-                parse.(Int, getindex.(split_strings_2, 1)),
-                parse.(AbstractSpinOrPolarization, getindex.(split_strings_2, 2)),
-            )...,
-        ])...,
+        sort(
+            [
+                tuple.(
+                    parse.(Int, getindex.(split_strings_1, 1)),
+                    parse.(AbstractSpinOrPolarization, getindex.(split_strings_1, 2)),
+                )...,
+                tuple.(
+                    parse.(Int, getindex.(split_strings_2, 1)),
+                    parse.(AbstractSpinOrPolarization, getindex.(split_strings_2, 2)),
+                )...,
+            ]
+        )...,
     )
 end
 function _parse_node_names(name1::String, name2::String, name3::String)
@@ -204,20 +206,22 @@ function _parse_node_names(name1::String, name2::String, name3::String)
 
     return tuple(
         # TODO: could use merge sort since the sub lists are sorted already
-        sort([
-            tuple.(
-                parse.(Int, getindex.(split_strings_1, 1)),
-                parse.(AbstractSpinOrPolarization, getindex.(split_strings_1, 2)),
-            )...,
-            tuple.(
-                parse.(Int, getindex.(split_strings_2, 1)),
-                parse.(AbstractSpinOrPolarization, getindex.(split_strings_2, 2)),
-            )...,
-            tuple.(
-                parse.(Int, getindex.(split_strings_3, 1)),
-                parse.(AbstractSpinOrPolarization, getindex.(split_strings_3, 2)),
-            )...,
-        ])...,
+        sort(
+            [
+                tuple.(
+                    parse.(Int, getindex.(split_strings_1, 1)),
+                    parse.(AbstractSpinOrPolarization, getindex.(split_strings_1, 2)),
+                )...,
+                tuple.(
+                    parse.(Int, getindex.(split_strings_2, 1)),
+                    parse.(AbstractSpinOrPolarization, getindex.(split_strings_2, 2)),
+                )...,
+                tuple.(
+                    parse.(Int, getindex.(split_strings_3, 1)),
+                    parse.(AbstractSpinOrPolarization, getindex.(split_strings_3, 2)),
+                )...,
+            ]
+        )...,
     )
 end
 
@@ -246,8 +250,8 @@ function _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tup
     proc_spin_pols = (incoming_spin_pols(proc)..., outgoing_spin_pols(proc)...)
 
     # for synced spins/pols, remember the first occurrence and its definite spin/pol, then check that later ones are the same
-    synced_pols = Dict{SyncedPol,AbstractDefinitePolarization}()
-    synced_spins = Dict{SyncedSpin,AbstractDefiniteSpin}()
+    synced_pols = Dict{SyncedPol, AbstractDefinitePolarization}()
+    synced_spins = Dict{SyncedSpin, AbstractDefiniteSpin}()
 
     for (i, sp) in index
         if proc_spin_pols[i] isa AllSpin || proc_spin_pols[i] isa AllPol
@@ -293,10 +297,10 @@ end
 
 Generate and return a [`ComputableDAGs.DAG`](@extref), representing the computation for the squared matrix element of this scattering process, summed over spin and polarization combinations allowed by the process.
 """
-function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition}
+function ComputableDAGs.graph(proc::PROC) where {PROC <: AbstractProcessDefinition}
     I = number_incoming_particles(proc)
     O = number_outgoing_particles(proc)
-    SPECIFIC_VP = VirtualParticle{PROC,NTuple{I,Bool},NTuple{O,Bool}}
+    SPECIFIC_VP = VirtualParticle{PROC, NTuple{I, Bool}, NTuple{O, Bool}}
     particles::Vector{SPECIFIC_VP} = virtual_particles(proc)                  # virtual particles that will be input to propagator tasks
 
     pairs = OrderedDict(particle_pairs(particles))       # pairs to generate the pair tasks
@@ -306,7 +310,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
     g = DAG()
 
     # -- Base State Tasks --
-    propagated_outputs = Dict{SPECIFIC_VP,Vector{Node}}()
+    propagated_outputs = Dict{SPECIFIC_VP, Vector{Node}}()
     for dir in (Incoming(), Outgoing())
         for species in (Electron(), Positron(), Photon())
             for index in 1:number_particles(proc, dir, species)
@@ -368,7 +372,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC<:AbstractProcessDefinition
         # make a dictionary of vectors to collect the outputs depending on spin/pol configs of the input particles
         N = _number_contributions(product_particle)
         pair_output_nodes_by_spin_pol = Dict{
-            NTuple{N,Tuple{Int,AbstractSpinOrPolarization}},Vector{DataTaskNode}
+            NTuple{N, Tuple{Int, AbstractSpinOrPolarization}}, Vector{DataTaskNode},
         }()
 
         for input_particles in input_particle_vector

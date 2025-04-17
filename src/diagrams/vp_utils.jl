@@ -36,8 +36,8 @@ end
 Return true if `a`, `b` and `c` combined contain all external particles exactly once and no open cycles remain.
 """
 function are_total(
-    a::VirtualParticle{PROC}, b::VirtualParticle{PROC}, c::VirtualParticle{PROC}
-) where {PROC<:AbstractProcessDefinition}
+        a::VirtualParticle{PROC}, b::VirtualParticle{PROC}, c::VirtualParticle{PROC}
+    ) where {PROC <: AbstractProcessDefinition}
     for (a_contrib, b_contrib, c_contrib) in
         Iterators.zip(Iterators.flatten.(_contributions.((a, b, c)))...)
         if a_contrib + b_contrib + c_contrib != 1
@@ -73,8 +73,8 @@ end
 
 @inline _make_up_helper(a::Tuple{}, b::Tuple{}, c::Tuple{}) = true
 @inline function _make_up_helper(
-    a::Tuple{Bool,Vararg}, b::Tuple{Bool,Vararg}, c::Tuple{Bool,Vararg}
-)
+        a::Tuple{Bool, Vararg}, b::Tuple{Bool, Vararg}, c::Tuple{Bool, Vararg}
+    )
     return if a[begin] + b[begin] == c[begin]
         _make_up_helper(a[2:end], b[2:end], c[2:end])
     else
@@ -84,12 +84,12 @@ end
 
 """
     make_up(a::VirtualParticle, b::VirtualParticle, c::VirtualParticle)
-    
+
 For virtual particles `a`, `b`, and `c`, return true if `a` and `b`'s joint momentum contributions add up to `c`'s momentum contributions.
 """
 function make_up(
-    a::VirtualParticle{PROC,I,O}, b::VirtualParticle{PROC,I,O}, c::VirtualParticle{PROC,I,O}
-) where {PROC,I,O}
+        a::VirtualParticle{PROC, I, O}, b::VirtualParticle{PROC, I, O}, c::VirtualParticle{PROC, I, O}
+    ) where {PROC, I, O}
     if a.species == b.species == Photon
         return false
     end

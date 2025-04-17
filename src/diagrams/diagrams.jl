@@ -2,7 +2,7 @@
     number_of_diagrams(proc::AbstractProcessDefinition)
 
 For a given [`QEDbase.AbstractProcessDefinition`](@extref), returns the number of valid
-Feynman diagrams at tree-level. This is equivalent to 
+Feynman diagrams at tree-level. This is equivalent to
 
 \$\\frac{(M + 3N - 3)!}{(2N - 1)!} * E! * U! * T!\$\\
 , where\\
@@ -39,41 +39,41 @@ end
 # "addition" of the bool tuples
 # TODO: this should probably not overload and export a + operator for base types
 function Base.:+(
-    a::Tuple{NTuple{I,Bool},NTuple{O,Bool}}, b::Tuple{NTuple{I,Bool},NTuple{O,Bool}}
-) where {I,O}
+        a::Tuple{NTuple{I, Bool}, NTuple{O, Bool}}, b::Tuple{NTuple{I, Bool}, NTuple{O, Bool}}
+    ) where {I, O}
     return (ntuple(i -> a[1][i] != b[1][i], I), ntuple(i -> a[2][i] != b[2][i], O))
 end
 
 @inline function _momentum_contribution_helper(
-    proc::AbstractProcessDefinition,
-    parts::Tuple{},
-    dir::ParticleDirection,
-    species::AbstractParticleType,
-    index::Int,
-    c::Int,
-)
+        proc::AbstractProcessDefinition,
+        parts::Tuple{},
+        dir::ParticleDirection,
+        species::AbstractParticleType,
+        index::Int,
+        c::Int,
+    )
     throw(
         "tried to get momentum contribution of $species $index but it does not exist in $proc",
     )
 end
 @inline function _momentum_contribution_helper(
-    proc::AbstractProcessDefinition,
-    parts::Tuple{SPECIES1,Vararg},
-    species::SPECIES2,
-    dir::DIR,
-    index::Int,  # index of particle to find
-    c::Int,      # count of seen particles
-) where {SPECIES1,SPECIES2,DIR}
+        proc::AbstractProcessDefinition,
+        parts::Tuple{SPECIES1, Vararg},
+        species::SPECIES2,
+        dir::DIR,
+        index::Int,  # index of particle to find
+        c::Int,      # count of seen particles
+    ) where {SPECIES1, SPECIES2, DIR}
     return _momentum_contribution_helper(proc, parts[2:end], species, dir, index, c + 1)
 end
 @inline function _momentum_contribution_helper(
-    proc::AbstractProcessDefinition,
-    parts::Tuple{SPECIES,Vararg},
-    species::SPECIES,
-    dir::DIR,
-    index::Int, # index of particle to find
-    c::Int,      # count of seen particles
-) where {DIR,SPECIES}
+        proc::AbstractProcessDefinition,
+        parts::Tuple{SPECIES, Vararg},
+        species::SPECIES,
+        dir::DIR,
+        index::Int, # index of particle to find
+        c::Int,      # count of seen particles
+    ) where {DIR, SPECIES}
     # equal species, check index, then call next
     if index == 0
         return (
@@ -85,11 +85,11 @@ end
 end
 
 function _momentum_contribution(
-    proc::AbstractProcessDefinition,
-    dir::ParticleDirection,
-    species::AbstractParticleType,
-    index::Int,
-)
+        proc::AbstractProcessDefinition,
+        dir::ParticleDirection,
+        species::AbstractParticleType,
+        index::Int,
+    )
     return _momentum_contribution_helper(
         proc, particles(proc, dir), species, dir, index - 1, 1
     )
@@ -107,7 +107,7 @@ function _fermion_type(proc::AbstractProcessDefinition, n::Int)
     N = E + U + T
 
     # from the fermion index, get (Direction, Species, n) tuple, where n means it's the nth particle of that dir and species
-    if (n > 0 && n <= E)
+    return if (n > 0 && n <= E)
         electron_n = n
         if electron_n > number_particles(proc, Incoming(), Electron())
             return (
@@ -170,10 +170,10 @@ end
     return _momentum_contribution(proc, _fermion_type(proc, n)...)
 end
 
-function _external_particle(proc::PROC, n::Int) where {PROC<:AbstractProcessDefinition}
+function _external_particle(proc::PROC, n::Int) where {PROC <: AbstractProcessDefinition}
     I = number_incoming_particles(proc)
     O = number_outgoing_particles(proc)
-    SPECIFIC_VP = VirtualParticle{PROC,NTuple{I,Bool},NTuple{O,Bool}}
+    SPECIFIC_VP = VirtualParticle{PROC, NTuple{I, Bool}, NTuple{O, Bool}}
 
     (dir, species, _) = _fermion_type(proc, n)
     if dir == Outgoing()
@@ -199,9 +199,9 @@ The result is used in the [`graph`](@ref) generation.
 See also: [`total_particle_triples`](@ref)
 """
 function particle_pairs(
-    particles::Vector{SPECIFIC_VP}
-) where {PROC,I,O,SPECIFIC_VP<:VirtualParticle{PROC,I,O}}
-    pairs = Dict{SPECIFIC_VP,Vector{Tuple{SPECIFIC_VP,SPECIFIC_VP}}}()
+        particles::Vector{SPECIFIC_VP}
+    ) where {PROC, I, O, SPECIFIC_VP <: VirtualParticle{PROC, I, O}}
+    pairs = Dict{SPECIFIC_VP, Vector{Tuple{SPECIFIC_VP, SPECIFIC_VP}}}()
 
     proc = process(first(particles))
     # make sure the "smallest" particles come first, i.e. those with few contributors
@@ -212,10 +212,10 @@ function particle_pairs(
     # find pairs for every particle after the external ones (those can't have pairs)
     for p_i in
         (number_incoming_particles(proc) + number_outgoing_particles(proc) + 1):length(
-        all_particles
-    )
+            all_particles
+        )
         p = all_particles[p_i]
-        pairs[p] = Vector{Tuple{SPECIFIC_VP,SPECIFIC_VP}}()
+        pairs[p] = Vector{Tuple{SPECIFIC_VP, SPECIFIC_VP}}()
 
         # only need to consider external particles and virtual particles that come before p_i
         for p_a_i in 1:(p_i - 2)
@@ -242,11 +242,11 @@ contains three particles, a [`QEDcore.Photon`](@extref), a [`QEDcore.Fermion`](@
 [`QEDcore.AntiFermion`](@extref). These three particles [`are_total`](@ref).
 """
 function total_particle_triples(
-    particles::Vector{VirtualParticle{PROC,I,O}}
-) where {PROC,I,O}
-    SPECIFIC_VP = VirtualParticle{PROC,I,O}
+        particles::Vector{VirtualParticle{PROC, I, O}}
+    ) where {PROC, I, O}
+    SPECIFIC_VP = VirtualParticle{PROC, I, O}
     # particle pairs making up the whole graph
-    result_triples = Vector{Tuple{SPECIFIC_VP,SPECIFIC_VP,SPECIFIC_VP}}()
+    result_triples = Vector{Tuple{SPECIFIC_VP, SPECIFIC_VP, SPECIFIC_VP}}()
 
     proc = process(first(particles))
 
@@ -301,13 +301,13 @@ The tuples need to match in length or an error is thrown.
 """
 @inline _count_particles(::Tuple{}, ::Tuple{}, species) = 0
 @inline function _count_particles(
-    parts::Tuple{SPECIES,Vararg}, bools::Tuple{Bool,Vararg}, species::SPECIES
-) where {SPECIES}
+        parts::Tuple{SPECIES, Vararg}, bools::Tuple{Bool, Vararg}, species::SPECIES
+    ) where {SPECIES}
     return (bools[1] ? 1 : 0) + _count_particles(parts[2:end], bools[2:end], species)
 end
 @inline function _count_particles(
-    parts::Tuple{SPECIES1,Vararg}, bools::Tuple{Bool,Vararg}, species::SPECIES2
-) where {SPECIES1,SPECIES2}
+        parts::Tuple{SPECIES1, Vararg}, bools::Tuple{Bool, Vararg}, species::SPECIES2
+    ) where {SPECIES1, SPECIES2}
     return 0 + _count_particles(parts[2:end], bools[2:end], species)
 end
 
@@ -466,8 +466,8 @@ end
 Return a `Vector` of all possible virtual particles with this configuration, i.e., with all possible distinct open cycles.
 """
 function gen_specific_vp_with_open_cycles(
-    proc::PROC, species::SPECIES, in_contribs::NTuple{I,Bool}, out_contribs::NTuple{O,Bool}
-) where {PROC<:AbstractProcessDefinition,SPECIES<:AbstractParticleType,I,O}
+        proc::PROC, species::SPECIES, in_contribs::NTuple{I, Bool}, out_contribs::NTuple{O, Bool}
+    ) where {PROC <: AbstractProcessDefinition, SPECIES <: AbstractParticleType, I, O}
     # get canonical indices of all participating fermions
     left_ferms = Int[]
     right_ferms = Int[]
@@ -491,7 +491,7 @@ function gen_specific_vp_with_open_cycles(
     open_cycles = _open_cycle_helper(left_ferms, right_ferms)
     return [
         VirtualParticle(proc, species, in_contribs, out_contribs, open_cycle) for
-        open_cycle in open_cycles
+            open_cycle in open_cycles
     ]
 end
 
@@ -501,9 +501,9 @@ end
 For a given [`QEDbase.AbstractProcessDefinition`](@extref), generate all virtual particles ([`VirtualParticle`](@ref)) that occur
 in some valid diagram. For more information see the virtual particle docs.
 """
-@memoize LRU(maxsize=3) function virtual_particles(
-    proc::PROC
-) where {PROC<:AbstractProcessDefinition}
+@memoize LRU(maxsize = 3) function virtual_particles(
+        proc::PROC
+    ) where {PROC <: AbstractProcessDefinition}
     I = number_incoming_particles(proc)
     O = number_outgoing_particles(proc)
 
@@ -511,7 +511,7 @@ in some valid diagram. For more information see the virtual particle docs.
         number_particles(proc, Incoming(), Electron()) +
         number_particles(proc, Outgoing(), Positron())
 
-    SPECIFIC_VP = VirtualParticle{PROC,NTuple{I,Bool},NTuple{O,Bool}}
+    SPECIFIC_VP = VirtualParticle{PROC, NTuple{I, Bool}, NTuple{O, Bool}}
     # use a set for deduplication
     particles = SPECIFIC_VP[]
 
@@ -519,9 +519,9 @@ in some valid diagram. For more information see the virtual particle docs.
     out_p = outgoing_particles(proc)
 
     for (in_contribs, out_contribs) in Iterators.product(
-        Iterators.product(ntuple(_ -> (false, true), I)...),
-        Iterators.product(ntuple(_ -> (false, true), O)...),
-    )
+            Iterators.product(ntuple(_ -> (false, true), I)...),
+            Iterators.product(ntuple(_ -> (false, true), O)...),
+        )
         # check whether the contributions make a valid particle
         electrons =
             _count_particles(in_p, in_contribs, Electron()) +

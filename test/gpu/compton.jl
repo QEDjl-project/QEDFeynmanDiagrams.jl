@@ -27,7 +27,7 @@ N = 128
     end
 
     @testset "2-photon Compton on GPU ($MOM_EL_TYPE)" for MOM_EL_TYPE in
-                                                          GPU_FLOAT_TYPES[GPU_MODULE]
+        GPU_FLOAT_TYPES[GPU_MODULE]
         input = [gen_process_input(RNG, PROC) for _ in 1:N]
         output = [zero(MOM_EL_TYPE) for _ in 1:N]
         gpu_input = VECTOR_TYPE(input)

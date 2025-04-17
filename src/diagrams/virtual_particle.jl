@@ -1,4 +1,4 @@
-const OPEN_FERMION_CYCLE_T = Tuple{Int64,Int64}
+const OPEN_FERMION_CYCLE_T = Tuple{Int64, Int64}
 
 """
     VirtualParticle{
@@ -15,11 +15,11 @@ The type parameters are:
 
 A virtual particle contains the information about the process it's a part of, its particle species,
 the in- and outgoing particles of the process that contribute to its momentum, and its open fermion cycles.
-The open cycles are in the context of fermion permutations. For `n` fermion lines in a process, there 
+The open cycles are in the context of fermion permutations. For `n` fermion lines in a process, there
 can be between 1 (like 1-2, 2-3, 3-1) and n (like 1-1, 2-2, 3-3) cycles, where the left number represents
 the canonical fermion index and the right number the canonical antifermion index.
 """
-struct VirtualParticle{PROC<:AbstractProcessDefinition,IT<:NTuple,OT<:NTuple}
+struct VirtualParticle{PROC <: AbstractProcessDefinition, IT <: NTuple, OT <: NTuple}
     proc::PROC
     species::Type
     in_particle_contributions::IT
@@ -28,31 +28,31 @@ struct VirtualParticle{PROC<:AbstractProcessDefinition,IT<:NTuple,OT<:NTuple}
     open_cycles::Vector{OPEN_FERMION_CYCLE_T}
 
     function VirtualParticle(
-        proc::PROC, species::PT, in_contrib::I, out_contrib::O
-    ) where {PROC,PT,I,O}
-        return new{PROC,I,O}(
+            proc::PROC, species::PT, in_contrib::I, out_contrib::O
+        ) where {PROC, PT, I, O}
+        return new{PROC, I, O}(
             proc, typeof(species), in_contrib, out_contrib, OPEN_FERMION_CYCLE_T[]
         )
     end
-    function VirtualParticle{PROC,I,O}(
-        proc::PROC, species::PT, in_contrib::I, out_contrib::O
-    ) where {PROC,PT,I,O}
-        return new{PROC,I,O}(
+    function VirtualParticle{PROC, I, O}(
+            proc::PROC, species::PT, in_contrib::I, out_contrib::O
+        ) where {PROC, PT, I, O}
+        return new{PROC, I, O}(
             proc, typeof(species), in_contrib, out_contrib, OPEN_FERMION_CYCLE_T[]
         )
     end
     function VirtualParticle(
-        proc::PROC,
-        species::PT,
-        in_contrib::I,
-        out_contrib::O,
-        open_cycles::Vector{OPEN_FERMION_CYCLE_T},
-    ) where {PROC,PT,I,O}
-        return new{PROC,I,O}(proc, typeof(species), in_contrib, out_contrib, open_cycles)
+            proc::PROC,
+            species::PT,
+            in_contrib::I,
+            out_contrib::O,
+            open_cycles::Vector{OPEN_FERMION_CYCLE_T},
+        ) where {PROC, PT, I, O}
+        return new{PROC, I, O}(proc, typeof(species), in_contrib, out_contrib, open_cycles)
     end
 end
 
-function Base.hash(vp::VP, h::UInt) where {VP<:VirtualParticle}
+function Base.hash(vp::VP, h::UInt) where {VP <: VirtualParticle}
     h = hash(VP, h)
     h = hash(vp.proc, h)
     h = hash(vp.species, h)
@@ -62,11 +62,11 @@ function Base.hash(vp::VP, h::UInt) where {VP<:VirtualParticle}
     return h
 end
 
-function Base.isequal(vp1::VP, vp2::VP) where {VP<:VirtualParticle}
+function Base.isequal(vp1::VP, vp2::VP) where {VP <: VirtualParticle}
     return vp1.species == vp2.species &&
-           vp1.in_particle_contributions == vp2.in_particle_contributions &&
-           vp1.out_particle_contributions == vp2.out_particle_contributions &&
-           vp1.open_cycles == vp2.open_cycles
+        vp1.in_particle_contributions == vp2.in_particle_contributions &&
+        vp1.out_particle_contributions == vp2.out_particle_contributions &&
+        vp1.open_cycles == vp2.open_cycles
 end
 
 function Base.show(io::IO, vp::VirtualParticle)
@@ -85,13 +85,13 @@ end
     return (vp.species)()
 end
 
-@inline function _in_contributions(vp::VirtualParticle{PROC,I,O})::I where {PROC,I,O}
+@inline function _in_contributions(vp::VirtualParticle{PROC, I, O})::I where {PROC, I, O}
     return vp.in_particle_contributions
 end
-@inline function _out_contributions(vp::VirtualParticle{PROC,I,O})::O where {PROC,I,O}
+@inline function _out_contributions(vp::VirtualParticle{PROC, I, O})::O where {PROC, I, O}
     return vp.out_particle_contributions
 end
-@inline function _contributions(vp::VirtualParticle{PROC,I,O})::Tuple{I,O} where {PROC,I,O}
+@inline function _contributions(vp::VirtualParticle{PROC, I, O})::Tuple{I, O} where {PROC, I, O}
     return ((_in_contributions(vp), _out_contributions(vp)))
 end
 
