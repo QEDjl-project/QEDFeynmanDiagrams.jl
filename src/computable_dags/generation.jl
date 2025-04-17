@@ -1,15 +1,3 @@
-_construction_string(::Incoming) = "Incoming()"
-_construction_string(::Outgoing) = "Outgoing()"
-
-_construction_string(::Electron) = "Electron()"
-_construction_string(::Positron) = "Positron()"
-_construction_string(::Photon) = "Photon()"
-
-_construction_string(::PolX) = "PolX()"
-_construction_string(::PolY) = "PolY()"
-_construction_string(::SpinUp) = "SpinUp()"
-_construction_string(::SpinDown) = "SpinDown()"
-
 function _parse_particle(name::String)
     local dir
     if startswith(name, "inc_")
@@ -59,11 +47,11 @@ function _parse_particle(name::String)
 end
 
 function spin_or_pol(
-    process::AbstractProcessDefinition,
-    dir::ParticleDirection,
-    species::AbstractParticleType,
-    n::Int,
-)
+        process::AbstractProcessDefinition,
+        dir::ParticleDirection,
+        species::AbstractParticleType,
+        n::Int,
+    )
     i = 0
     c = n
     for p in particles(process, dir)
@@ -88,8 +76,8 @@ function spin_or_pol(
 end
 
 function ComputableDAGs.input_expr(
-    proc::AbstractProcessDefinition, name::String, psp_symbol::Symbol
-)
+        proc::AbstractProcessDefinition, name::String, psp_symbol::Symbol
+    )
     if startswith(name, "bs_")
         (dir, species, spin_pol, index) = _parse_particle(name[4:end])
         dir_str = _construction_string(dir)
@@ -98,7 +86,7 @@ function ComputableDAGs.input_expr(
 
         return Meta.parse(
             "QEDFeynmanDiagrams.BaseStateInput(
-                ParticleStateful($dir_str, $species_str, momentum($psp_symbol, $dir_str, $species_str, $index)),
+                ParticleStateful($dir_str, $species_str, momentum($psp_symbol, $dir_str, $species_str, Val($index))),
                 $sp_str,
             )",
         )
@@ -108,41 +96,43 @@ function ComputableDAGs.input_expr(
 
         vp = virtual_particles(proc)[index]
         return Meta.parse("QEDFeynmanDiagrams.PropagatorInput(
-                              VirtualParticle(
+                              QEDFeynmanDiagrams.VirtualParticle(
                                 process($psp_symbol),
                                 $(_construction_string(particle_species(vp))),
                                 $(vp.in_particle_contributions),
                                 $(vp.out_particle_contributions)
                               ),
-                              Ref($psp_symbol)
+                              $psp_symbol
                           )")
     else
         throw(InvalidInputError("failed to parse node name \"$name\""))
     end
 end
 
-function ComputableDAGs.input_type(p::AbstractProcessDefinition)
-    return Any
-    in_t = QEDcore._assemble_tuple_type(incoming_particles(p), Incoming(), SFourMomentum)
-    out_t = QEDcore._assemble_tuple_type(outgoing_particles(p), Outgoing(), SFourMomentum)
-    return PhaseSpacePoint{
-        typeof(p),
-        PerturbativeQED,
-        PhasespaceDefinition{SphericalCoordinateSystem,ElectronRestFrame},
-        Tuple{in_t...},
-        Tuple{out_t...},
-        SFourMomentum,
-    }
+# recursion termination: base case
+@inline _assemble_input_type(::Tuple{}, ::ParticleDirection) = ()
+
+# function assembling the correct type information for the tuple of ParticleStatefuls in a phasespace point for input_type
+@inline function _assemble_input_type(
+        particle_types::Tuple{SPECIES_T, Vararg{AbstractParticleType}}, dir::DIR_T
+    ) where {SPECIES_T <: AbstractParticleType, DIR_T <: ParticleDirection}
+    return (
+        AbstractParticleStateful{DIR_T, SPECIES_T},
+        _assemble_input_type(particle_types[2:end], dir)...,
+    )
 end
 
-_species_str(::Photon) = "ph"
-_species_str(::Electron) = "el"
-_species_str(::Positron) = "po"
-
-_spin_pol_str(::SpinUp) = "su"
-_spin_pol_str(::SpinDown) = "sd"
-_spin_pol_str(::PolX) = "px"
-_spin_pol_str(::PolY) = "py"
+function ComputableDAGs.input_type(p::AbstractProcessDefinition)
+    in_t = _assemble_input_type(incoming_particles(p), Incoming())
+    out_t = _assemble_input_type(outgoing_particles(p), Outgoing())
+    return AbstractPhaseSpacePoint{
+        typeof(p),
+        <:AbstractModelDefinition,
+        <:AbstractPhaseSpaceLayout,
+        <:Tuple{in_t...},
+        <:Tuple{out_t...},
+    }
+end
 
 function Base.parse(::Type{AbstractSpinOrPolarization}, s::AbstractString)
     if s == "su"
@@ -158,61 +148,6 @@ function Base.parse(::Type{AbstractSpinOrPolarization}, s::AbstractString)
         return PolY()
     end
     throw(InvalidInputError("invalid string \"$s\" to parse to AbstractSpinOrPolarization"))
-end
-
-_dir_str(::Incoming) = "inc"
-_dir_str(::Outgoing) = "out"
-
-_spin_pols(::AllSpin) = (SpinUp(), SpinDown())
-_spin_pols(::SpinUp) = (SpinUp(),)
-_spin_pols(::SpinDown) = (SpinDown(),)
-_spin_pols(::AllPol) = (PolX(), PolY())
-_spin_pols(::PolX) = (PolX(),)
-_spin_pols(::PolY) = (PolY(),)
-
-_is_external(p::VirtualParticle) = _number_contributions(p) == 1
-
-function _total_index(
-    proc::AbstractProcessDefinition,
-    dir::ParticleDirection,
-    species::AbstractParticleType,
-    n::Int,
-)
-    # find particle index of all particles given n-th particle of dir and species (inverse of _species_index)
-    total_index = 0
-    species_count = 0
-    for p in particles(proc, dir)
-        total_index += 1
-        if species == p
-            species_count += 1
-        end
-        if species_count == n
-            return if dir == Incoming()
-                total_index
-            else
-                number_incoming_particles(proc) + total_index
-            end
-        end
-    end
-
-    throw("did not find $n-th $dir $species")
-end
-
-function _species_index(
-    proc::AbstractProcessDefinition,
-    dir::ParticleDirection,
-    species::AbstractParticleType,
-    n::Int,
-)
-    # find particle index of n-th particle of *this species and dir*
-    species_index = 0
-    for i in 1:n
-        if particles(proc, dir)[i] == species
-            species_index += 1
-        end
-    end
-
-    return species_index
 end
 
 function _base_state_name(p::VirtualParticle)
@@ -250,16 +185,18 @@ function _parse_node_names(name1::String, name2::String)
 
     return tuple(
         # TODO: could use merge sort since the sub lists are sorted already
-        sort([
-            tuple.(
-                parse.(Int, getindex.(split_strings_1, 1)),
-                parse.(AbstractSpinOrPolarization, getindex.(split_strings_1, 2)),
-            )...,
-            tuple.(
-                parse.(Int, getindex.(split_strings_2, 1)),
-                parse.(AbstractSpinOrPolarization, getindex.(split_strings_2, 2)),
-            )...,
-        ])...,
+        sort(
+            [
+                tuple.(
+                    parse.(Int, getindex.(split_strings_1, 1)),
+                    parse.(AbstractSpinOrPolarization, getindex.(split_strings_1, 2)),
+                )...,
+                tuple.(
+                    parse.(Int, getindex.(split_strings_2, 1)),
+                    parse.(AbstractSpinOrPolarization, getindex.(split_strings_2, 2)),
+                )...,
+            ]
+        )...,
     )
 end
 function _parse_node_names(name1::String, name2::String, name3::String)
@@ -269,20 +206,22 @@ function _parse_node_names(name1::String, name2::String, name3::String)
 
     return tuple(
         # TODO: could use merge sort since the sub lists are sorted already
-        sort([
-            tuple.(
-                parse.(Int, getindex.(split_strings_1, 1)),
-                parse.(AbstractSpinOrPolarization, getindex.(split_strings_1, 2)),
-            )...,
-            tuple.(
-                parse.(Int, getindex.(split_strings_2, 1)),
-                parse.(AbstractSpinOrPolarization, getindex.(split_strings_2, 2)),
-            )...,
-            tuple.(
-                parse.(Int, getindex.(split_strings_3, 1)),
-                parse.(AbstractSpinOrPolarization, getindex.(split_strings_3, 2)),
-            )...,
-        ])...,
+        sort(
+            [
+                tuple.(
+                    parse.(Int, getindex.(split_strings_1, 1)),
+                    parse.(AbstractSpinOrPolarization, getindex.(split_strings_1, 2)),
+                )...,
+                tuple.(
+                    parse.(Int, getindex.(split_strings_2, 1)),
+                    parse.(AbstractSpinOrPolarization, getindex.(split_strings_2, 2)),
+                )...,
+                tuple.(
+                    parse.(Int, getindex.(split_strings_3, 1)),
+                    parse.(AbstractSpinOrPolarization, getindex.(split_strings_3, 2)),
+                )...,
+            ]
+        )...,
     )
 end
 
@@ -302,43 +241,107 @@ function _make_node_name(spin_pols::Vector)
 end
 
 """
-    generate_DAG(proc::AbstractProcessDefinition)
+    _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tuple)
 
-Generate and return a `DAG` from `ComputableDAGs`, representing the computation for the squared matrix element of this scattering process, summed over spin and polarization combinations allowed by the process.
+Internal function for DAG generation. Checks for a given process and a spin/pol combination whether the spin/pol combination is
+part of the process, including checking for [`QEDbase.SyncedPolarization`](@extref) and [`QEDbase.SyncedSpin`](@extref).
 """
-function generate_DAG(proc::AbstractProcessDefinition)
-    particles = virtual_particles(proc)                  # virtual particles that will be input to propagator tasks
-    pairs = sort(particle_pairs(particles))              # pairs to generate the pair tasks
+function _is_index_valid_combination(proc::AbstractProcessDefinition, index::Tuple)
+    proc_spin_pols = (incoming_spin_pols(proc)..., outgoing_spin_pols(proc)...)
+
+    # for synced spins/pols, remember the first occurrence and its definite spin/pol, then check that later ones are the same
+    synced_pols = Dict{SyncedPol, AbstractDefinitePolarization}()
+    synced_spins = Dict{SyncedSpin, AbstractDefiniteSpin}()
+
+    for (i, sp) in index
+        if proc_spin_pols[i] isa AllSpin || proc_spin_pols[i] isa AllPol
+            # for allspin and allpol, everything is allowed
+            continue
+        end
+        if proc_spin_pols[i] == sp
+            # sp is always definite, so if they're equal the combination is always allowed
+            continue
+        end
+        if proc_spin_pols[i] isa SyncedSpin
+            if !haskey(synced_spins, proc_spin_pols[i]) # insert first occurrence
+                synced_spins[proc_spin_pols[i]] = sp
+                continue
+            end
+            if synced_spins[proc_spin_pols[i]] == sp # otherwise, check if sp is synced
+                continue
+            end
+            # the spin is not synced
+            return false
+        end
+
+        if proc_spin_pols[i] isa SyncedPol
+            if !haskey(synced_pols, proc_spin_pols[i])
+                synced_pols[proc_spin_pols[i]] = sp
+                continue
+            end
+            if synced_pols[proc_spin_pols[i]] == sp
+                continue
+            end
+            # the pol is not synced
+            return false
+        end
+
+        error("encountered unknown spin or polarization type")
+    end
+
+    return true
+end
+
+"""
+    graph(proc::AbstractProcessDefinition)
+
+Generate and return a [`ComputableDAGs.DAG`](@extref), representing the computation for the squared matrix element of this scattering process, summed over spin and polarization combinations allowed by the process.
+"""
+function ComputableDAGs.graph(proc::PROC) where {PROC <: AbstractProcessDefinition}
+    I = number_incoming_particles(proc)
+    O = number_outgoing_particles(proc)
+    SPECIFIC_VP = VirtualParticle{PROC, NTuple{I, Bool}, NTuple{O, Bool}}
+    particles::Vector{SPECIFIC_VP} = virtual_particles(proc)                  # virtual particles that will be input to propagator tasks
+
+    pairs = OrderedDict(particle_pairs(particles))       # pairs to generate the pair tasks
+    sort!(pairs)
     triples = sort(total_particle_triples(particles))    # triples to generate the triple tasks
 
-    graph = DAG()
+    g = DAG()
 
-    # TODO: use the spin/pol iterator here once it has been implemented
     # -- Base State Tasks --
-    base_state_task_outputs = Dict()
+    propagated_outputs = Dict{SPECIFIC_VP, Vector{Node}}()
     for dir in (Incoming(), Outgoing())
         for species in (Electron(), Positron(), Photon())
             for index in 1:number_particles(proc, dir, species)
+                p = VirtualParticle(
+                    proc,
+                    is_outgoing(dir) ? _invert(species) : species,
+                    _momentum_contribution(proc, dir, species, index)...,
+                )
                 for spin_pol in _spin_pols(spin_or_pol(proc, dir, species, index))
                     # gen entry nodes
                     # names are "bs_<dir>_<species>_<spin/pol>_<index>"
                     data_node_name = "bs_$(_dir_str(dir))_$(_species_str(species))_$(_spin_pol_str(spin_pol))_$(index)"
 
-                    data_in = insert_node!(graph, DataTask(0), data_node_name)
+                    data_in = insert_node!(g, DataTask(0), data_node_name)
 
                     # generate initial base_state tasks
-                    compute_base_state = insert_node!(graph, ComputeTask_BaseState())
+                    compute_base_state = insert_node!(g, ComputeTask_BaseState())
 
                     data_out = insert_node!(
-                        graph,
+                        g,
                         DataTask(0),
                         "$(_total_index(proc, dir, species, index))_$(_spin_pol_str(spin_pol))",
                     )
 
-                    insert_edge!(graph, data_in, compute_base_state)
-                    insert_edge!(graph, compute_base_state, data_out)
+                    insert_edge!(g, data_in, compute_base_state)
+                    insert_edge!(g, compute_base_state, data_out)
 
-                    base_state_task_outputs[data_node_name] = data_out
+                    if !haskey(propagated_outputs, p)
+                        propagated_outputs[p] = Vector{Node}()
+                    end
+                    push!(propagated_outputs[p], data_out)
                 end
             end
         end
@@ -352,55 +355,59 @@ function generate_DAG(proc::AbstractProcessDefinition)
 
         data_node_name = "pr_$vp_index"
 
-        data_in = insert_node!(graph, DataTask(0), data_node_name)
-        compute_vp_propagator = insert_node!(graph, ComputeTask_Propagator())
-        data_out = insert_node!(graph, DataTask(0))
+        data_in = insert_node!(g, DataTask(0), data_node_name)
+        compute_vp_propagator = insert_node!(g, ComputeTask_Propagator())
+        data_out = insert_node!(g, DataTask(0))
 
-        insert_edge!(graph, data_in, compute_vp_propagator)
-        insert_edge!(graph, compute_vp_propagator, data_out)
+        insert_edge!(g, data_in, compute_vp_propagator)
+        insert_edge!(g, compute_vp_propagator, data_out)
 
         propagator_task_outputs[vp] = data_out
     end
 
     # -- Pair Tasks --
-    pair_task_outputs = Dict{VirtualParticle,Vector{Node}}()
     for (product_particle, input_particle_vector) in pairs
-        pair_task_outputs[product_particle] = Vector{Node}()
+        propagated_outputs[product_particle] = Vector{Node}()
 
         # make a dictionary of vectors to collect the outputs depending on spin/pol configs of the input particles
         N = _number_contributions(product_particle)
         pair_output_nodes_by_spin_pol = Dict{
-            NTuple{N,Tuple{Int,AbstractSpinOrPolarization}},Vector{DataTaskNode}
+            NTuple{N, Tuple{Int, AbstractSpinOrPolarization}}, Vector{DataTaskNode},
         }()
 
         for input_particles in input_particle_vector
-            particles_data_out_nodes = (Vector(), Vector())
-            c = 0
-            for p in input_particles
-                c += 1
-                if (is_external(p))
-                    # grab from base_states (broadcast over _base_state_name because it is a tuple for different spin_pols)
-                    push!.(
-                        Ref(particles_data_out_nodes[c]),
-                        getindex.(Ref(base_state_task_outputs), _base_state_name(p)),
-                    )
-                else
-                    # grab from propagated particles
-                    append!(particles_data_out_nodes[c], pair_task_outputs[p])
-                end
-            end
+            # input_particles is a tuple of first and second particle
+            particles_data_out_nodes = (
+                propagated_outputs[input_particles[1]],
+                propagated_outputs[input_particles[2]],
+            )
 
             for in_nodes in Iterators.product(particles_data_out_nodes...)
-                # make the compute pair nodes for every combination of the found input_particle_nodes to get all spin/pol combinations
-                compute_pair = insert_node!(graph, ComputeTask_Pair())
-                pair_data_out = insert_node!(graph, DataTask(0))
-
-                insert_edge!(graph, in_nodes[1], compute_pair)
-                insert_edge!(graph, in_nodes[2], compute_pair)
-                insert_edge!(graph, compute_pair, pair_data_out)
-
                 # get the spin/pol config of the input particles from the data_out names
                 index = _parse_node_names(in_nodes[1].name, in_nodes[2].name)
+                # index is a tuple of tuples, containing the particle index and their definite spin/pol
+                if !_is_index_valid_combination(proc, index)
+                    # skip this pair creation if the spin/pol combination doesn't exist
+                    continue
+                end
+
+                # make the compute pair nodes for every combination of the found input_particle_nodes to get all spin/pol combinations
+                negate = relative_sign_pair(input_particles[1], input_particles[2])
+
+                compute_pair = if negate
+                    insert_node!(g, ComputeTask_PairNegated())
+                else
+                    insert_node!(g, ComputeTask_Pair())
+                end
+                pair_data_out = insert_node!(g, DataTask(0))
+
+                insert_edge!(
+                    g, in_nodes[1], compute_pair, _edge_index_from_vp(input_particles[1])
+                )
+                insert_edge!(
+                    g, in_nodes[2], compute_pair, _edge_index_from_vp(input_particles[2])
+                )
+                insert_edge!(g, compute_pair, pair_data_out)
 
                 if !haskey(pair_output_nodes_by_spin_pol, index)
                     pair_output_nodes_by_spin_pol[index] = Vector()
@@ -413,57 +420,58 @@ function generate_DAG(proc::AbstractProcessDefinition)
 
         for (index, nodes_to_sum) in pair_output_nodes_by_spin_pol
             compute_pairs_sum = insert_node!(
-                graph, ComputeTask_CollectPairs(length(nodes_to_sum))
+                g, ComputeTask_CollectPairs(length(nodes_to_sum))
             )
-            data_pairs_sum = insert_node!(graph, DataTask(0))
-            compute_propagated = insert_node!(graph, ComputeTask_PropagatePairs())
+
+            data_pairs_sum = insert_node!(g, DataTask(0))
+            compute_propagated = insert_node!(g, ComputeTask_PropagatePairs())
             # give this out node the correct name
-            data_out_propagated = insert_node!(
-                graph, DataTask(0), _make_node_name([index...])
-            )
+            data_out_propagated = insert_node!(g, DataTask(0), _make_node_name([index...]))
 
             for node in nodes_to_sum
-                insert_edge!(graph, node, compute_pairs_sum)
+                insert_edge!(g, node, compute_pairs_sum, 2)
             end
 
-            insert_edge!(graph, compute_pairs_sum, data_pairs_sum)
-            insert_edge!(graph, propagator_node, compute_propagated)
-            insert_edge!(graph, data_pairs_sum, compute_propagated)
-            insert_edge!(graph, compute_propagated, data_out_propagated)
+            insert_edge!(g, compute_pairs_sum, data_pairs_sum)
 
-            push!(pair_task_outputs[product_particle], data_out_propagated)
+            insert_edge!(g, propagator_node, compute_propagated, 1)
+            insert_edge!(g, data_pairs_sum, compute_propagated, 2)
+
+            insert_edge!(g, compute_propagated, data_out_propagated)
+
+            push!(propagated_outputs[product_particle], data_out_propagated)
         end
     end
 
     # -- Triples --
     triples_results = Dict()
     for (ph, el, po) in triples    # for each triple (each "diagram")
-        photons = if is_external(ph)
-            getindex.(Ref(base_state_task_outputs), _base_state_name(ph))
-        else
-            pair_task_outputs[ph]
-        end
-        electrons = if is_external(el)
-            getindex.(Ref(base_state_task_outputs), _base_state_name(el))
-        else
-            pair_task_outputs[el]
-        end
-        positrons = if is_external(po)
-            getindex.(Ref(base_state_task_outputs), _base_state_name(po))
-        else
-            pair_task_outputs[po]
-        end
+        photons = propagated_outputs[ph]
+        electrons = propagated_outputs[el]
+        positrons = propagated_outputs[po]
+
         for (a, b, c) in Iterators.product(photons, electrons, positrons) # for each spin/pol config of each part
-            compute_triples = insert_node!(graph, ComputeTask_Triple())
-            data_triples = insert_node!(graph, DataTask(0))
-
-            insert_edge!(graph, a, compute_triples)
-            insert_edge!(graph, b, compute_triples)
-            insert_edge!(graph, c, compute_triples)
-
-            insert_edge!(graph, compute_triples, data_triples)
-
             index = _parse_node_names(a.name, b.name, c.name)
+            if !_is_index_valid_combination(proc, index)
+                # skip this triple creation if the spin/pol combination doesn't exist, same as for pairs
+                continue
+            end
+
+            negate = relative_sign_triple(el, po, ph)
+
+            compute_triples = if negate
+                insert_node!(g, ComputeTask_TripleNegated())
+            else
+                insert_node!(g, ComputeTask_Triple())
+            end
+            data_triples = insert_node!(g, DataTask(0))
+
+            insert_edge!(g, a, compute_triples, _edge_index_from_species(Photon())) # first argument photons
+            insert_edge!(g, b, compute_triples, _edge_index_from_species(Electron())) # second argument electrons
+            insert_edge!(g, c, compute_triples, _edge_index_from_species(Positron())) # third argument positrons
+
+            insert_edge!(g, compute_triples, data_triples)
+
             if !haskey(triples_results, index)
                 triples_results[index] = Vector{DataTaskNode}()
             end
@@ -475,27 +483,27 @@ function generate_DAG(proc::AbstractProcessDefinition)
     collected_triples = Vector{DataTaskNode}()
     for (index, results) in triples_results
         compute_collect_triples = insert_node!(
-            graph, ComputeTask_CollectTriples(length(results))
+            g, ComputeTask_CollectTriples(length(results))
         )
-        data_collect_triples = insert_node!(graph, DataTask(0))
+        data_collect_triples = insert_node!(g, DataTask(0))
 
         for triple in results
-            insert_edge!(graph, triple, compute_collect_triples)
+            insert_edge!(g, triple, compute_collect_triples)
         end
-        insert_edge!(graph, compute_collect_triples, data_collect_triples)
+        insert_edge!(g, compute_collect_triples, data_collect_triples)
 
         push!(collected_triples, data_collect_triples)
     end
 
     # Finally, abs2 sum over spin/pol configurations
     compute_total_result = insert_node!(
-        graph, ComputeTask_SpinPolCumulation(length(collected_triples))
+        g, ComputeTask_SpinPolCumulation(length(collected_triples))
     )
     for finished_triple in collected_triples
-        insert_edge!(graph, finished_triple, compute_total_result)
+        insert_edge!(g, finished_triple, compute_total_result)
     end
 
-    final_data_out = insert_node!(graph, DataTask(0))
-    insert_edge!(graph, compute_total_result, final_data_out)
-    return graph
+    final_data_out = insert_node!(g, DataTask(0))
+    insert_edge!(g, compute_total_result, final_data_out)
+    return g
 end

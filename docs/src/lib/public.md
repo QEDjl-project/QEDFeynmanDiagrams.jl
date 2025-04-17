@@ -1,17 +1,11 @@
 # Public Interface
 
-## Types
-
-```@docs
-FeynmanDiagram
-VirtualParticle
+```@index
+Pages = ["public.md"]
 ```
 
 ## Functions
 ```@docs
-feynman_diagrams
-external_particles
-virtual_particles
-process
-generate_DAG
+graph
+number_of_diagrams
 ```
