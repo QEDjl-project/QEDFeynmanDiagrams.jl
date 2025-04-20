@@ -1,0 +1,77 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.5 Chrome/126.0.6478.183 Electron/31.3.0 Safari/537.36" version="24.7.5">
+  <diagram name="Page-1" id="87zjyKFg_R7fKXtwbrFv">
+    <mxGraphModel dx="359" dy="1464" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="500" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tTjncCMeGMfWQnpH7CoX-3" target="tTjncCMeGMfWQnpH7CoX-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-3" value="VPC&lt;div&gt;π_1&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="160" y="-520" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tTjncCMeGMfWQnpH7CoX-4" target="tTjncCMeGMfWQnpH7CoX-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-4" value="VPC&lt;div&gt;π_1&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="280" y="-520" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tTjncCMeGMfWQnpH7CoX-5" target="tTjncCMeGMfWQnpH7CoX-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-5" value="Σ" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="220" y="-640" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tTjncCMeGMfWQnpH7CoX-6" target="tTjncCMeGMfWQnpH7CoX-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-6" value="Propagate&lt;div&gt;π_1&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="220" y="-760" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tTjncCMeGMfWQnpH7CoX-7" target="tTjncCMeGMfWQnpH7CoX-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;" edge="1" parent="1" source="tTjncCMeGMfWQnpH7CoX-7">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="379.9999999999998" y="-680" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="380" y="-640" />
+              <mxPoint x="380" y="-640" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-7" value="Propagate&lt;div&gt;π_2&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="340" y="-760" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-9" value="mul with vertex&lt;span style=&quot;background-color: initial;&quot;&gt;&amp;nbsp;-&amp;gt; VPC&lt;/span&gt;&lt;div&gt;&lt;div&gt;π =&lt;/div&gt;&lt;div&gt;π_1&amp;nbsp;&lt;span style=&quot;background-color: initial;&quot;&gt;∪ π_2&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="1">
+          <mxGeometry x="280" y="-880" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;dashed=1;" edge="1" parent="1" target="tTjncCMeGMfWQnpH7CoX-5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="400" y="-539" as="sourcePoint" />
+            <mxPoint x="270" y="-550" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="336" y="-539" />
+              <mxPoint x="260" y="-540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-17" value="Virtual Particle Current&lt;div&gt;Unpropagated, Unsummed&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry y="-495" width="150" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-18" value="Virtual Particle Current&lt;div&gt;Unpropagated, Summed&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry y="-615" width="150" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-19" value="Virtual Particle Current&lt;div&gt;Propagated, Summed&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry y="-735" width="150" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-20" value="π_1 is some set of particles&lt;div&gt;Different VPCs make up π_1 with different pairs of&amp;nbsp; subsets&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="370" y="-525" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="tTjncCMeGMfWQnpH7CoX-21" value="π_1 and π_2 must be disjunct particle sets and their type (fermion/antifermion/boson) must fit together" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="430" y="-772.5" width="160" height="105" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
