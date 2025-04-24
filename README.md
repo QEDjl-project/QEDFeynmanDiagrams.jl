@@ -1,7 +1,7 @@
 # QEDFeynmanDiagrams.jl
 
-[![Build Status](https://github.com/QEDjl-project/QEDFeynmanDiagrams.jl/actions/workflows/unit_tests.yml/badge.svg?branch=main)](https://github.com/QEDjl-project/QEDFeynmanDiagrams.jl/actions/workflows/unit_tests.yml/)
-[![Doc Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://QEDjl-project.github.io/QEDFeynmanDiagrams.jl/dev/)
+[![docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://QEDjl-project.github.io/QEDFeynmanDiagrams.jl/dev/)
+[![DOI](https://rodare.hzdr.de/badge/DOI/10.14278/rodare.3713.svg)](https://doi.org/10.14278/rodare.3713)
 [![code style: runic](https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black)](https://github.com/fredrikekre/Runic.jl)
 
 Generator for QED Feynman diagrams and [`ComputableDAGs.jl`](https://github.com/ComputableDAGs/ComputableDAGs.jl) to compute scattering processes' matrix elements.
