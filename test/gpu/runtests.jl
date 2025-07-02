@@ -119,7 +119,6 @@ end
 using RuntimeGeneratedFunctions
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
-include("../utils.jl")
 include("../impl/compton.jl")
 include("../impl/bhabha.jl")
 

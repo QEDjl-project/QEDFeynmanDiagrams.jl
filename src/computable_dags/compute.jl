@@ -18,8 +18,11 @@ end
 # import so we don't have to repeat it all the time
 import ComputableDAGs: compute, compute_effort, children
 
-const e = sqrt(4π / 137.035999177)
-const VERTEX = -1im * e * gamma()
+Base.@irrational e (sqrt(4π / big(137.035999177)))
+
+function VERTEX(::Type{F}) where {F <: AbstractFloat}
+    return (-(one(complex(F))) * e * gamma(complex(F)))
+end
 
 compute_effort(::ComputeTask_BaseState) = 0
 compute_effort(::ComputeTask_Propagator) = 0
@@ -143,27 +146,31 @@ end
         photon::Propagated{Photon},
         electron::Propagated{Electron},
     )
-    return Unpropagated(Electron(), (photon.value * VERTEX) * electron.value) # photon - electron -> electron
+    T = real(eltype(photon.value))
+    return Unpropagated(Electron(), (photon.value * VERTEX(T)) * electron.value) # photon - electron -> electron
 end
 @inline function compute( # photon, positron
         ::ComputeTask_Pair,
         photon::Propagated{Photon},
         positron::Propagated{Positron},
     )
-    return Unpropagated(Positron(), positron.value * (VERTEX * photon.value)) # photon - positron -> positron
+    T = real(eltype(photon.value))
+    return Unpropagated(Positron(), positron.value * (VERTEX(T) * photon.value)) # photon - positron -> positron
 end
 @inline function compute( # electron, positron
         ::ComputeTask_Pair,
         electron::Propagated{Electron},
         positron::Propagated{Positron},
     )
-    return Unpropagated(Photon(), positron.value * VERTEX * electron.value)  # electron - positron -> photon
+    T = real(eltype(electron.value))
+    return Unpropagated(Photon(), positron.value * VERTEX(T) * electron.value)  # electron - positron -> photon
 end
 
 @inline function compute(
         ::ComputeTask_PairNegated, v1::Propagated{P1}, v2::Propagated{P2}
     ) where {P1, P2}
-    return -1 * compute(ComputeTask_Pair(), v1, v2)
+    T = real(eltype(v1.value))
+    return -one(T) * compute(ComputeTask_Pair(), v1, v2)
 end
 
 @inline function compute(::ComputeTask_PropagatePairs, prop, photon::Unpropagated{Photon})
@@ -186,7 +193,8 @@ end
         electron::Propagated{Electron},
         positron::Propagated{Positron},
     )
-    return positron.value * (VERTEX * photon.value) * electron.value
+    T = real(eltype(photon.value))
+    return positron.value * (VERTEX(T) * photon.value) * electron.value
 end
 @inline function compute(
         ::ComputeTask_TripleNegated,
@@ -194,21 +202,20 @@ end
         electron::Propagated{Electron},
         positron::Propagated{Positron},
     )
-    return -1 * (positron.value * (VERTEX * photon.value) * electron.value)
+    T = real(eltype(photon.value))
+    return -one(T) * (positron.value * (VERTEX(T) * photon.value) * electron.value)
 end
 
 # this compiles in a reasonable amount of time for up to about 1e4 parameters
 # TODO: use a summation algorithm with more accuracy and/or parallelization
-function compute(::ComputeTask_CollectPairs, args::Vararg{N, T}) where {N, T}
+function compute(::ComputeTask_CollectPairs, args::Vararg{T, N}) where {T, N}
     return sum(args)
 end
-function compute(::ComputeTask_CollectTriples, args::Vararg{N, T}) where {N, T}
-    #println("$([args...])")
-    #println("$(sum(args))")
+function compute(::ComputeTask_CollectTriples, args::Vararg{T, N}) where {T, N}
     return sum(args)
 end
-function compute(::ComputeTask_SpinPolCumulation, args::Vararg{N, T}) where {N, T}
-    sum = 0.0
+function compute(::ComputeTask_SpinPolCumulation, args::Vararg{T, N}) where {T, N}
+    sum = zero(real(eltype(T)))
     for arg in args
         sum += abs2(arg)
     end

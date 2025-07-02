@@ -15,12 +15,13 @@ end
 function two_compton_diagram(
         in_el, out_el, ph_1, ph_2, ph_3, in_el_s, out_el_s, ph_1_p, ph_2_p, ph_3_p
     )
+    T = eltype(in_el)
     return base_state(Electron(), Outgoing(), -out_el, out_el_s) *
-        (base_state(Photon(), Incoming(), ph_3, ph_3_p) * VERTEX) *
+        (base_state(Photon(), Incoming(), ph_3, ph_3_p) * VERTEX(T)) *
         propagator(Electron(), -out_el - ph_3) *
-        (base_state(Photon(), Incoming(), ph_2, ph_2_p) * VERTEX) *
+        (base_state(Photon(), Incoming(), ph_2, ph_2_p) * VERTEX(T)) *
         propagator(Electron(), -out_el - ph_2 - ph_3) *
-        (base_state(Photon(), Incoming(), ph_1, ph_1_p) * VERTEX) *
+        (base_state(Photon(), Incoming(), ph_1, ph_1_p) * VERTEX(T)) *
         base_state(Electron(), Incoming(), in_el, in_el_s)
 end
 
@@ -69,7 +70,7 @@ function two_compton_mat_el(psp::AbstractPhaseSpacePoint)
     @assert incoming_particles(proc)[1] == Electron() "the first incoming particle should be the electron"
     @assert outgoing_particles(proc)[1] == Electron() "the first outgoing particle should be the electron"
 
-    TYPE = Float64 #momentum_eltype(psp)
+    TYPE = momentum_eltype(psp)
 
     cum_sum = zero(TYPE)
     for sp_comb in spin_pols_iter(proc)
