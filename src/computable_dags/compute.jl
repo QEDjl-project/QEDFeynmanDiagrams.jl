@@ -146,7 +146,7 @@ end
         photon::Propagated{Photon},
         electron::Propagated{Electron},
     )
-    T = real(eltype(photon.value))
+    T = real(eltype(electron.value))
     return Unpropagated(Electron(), (photon.value * VERTEX(T)) * electron.value) # photon - electron -> electron
 end
 @inline function compute( # photon, positron
@@ -154,7 +154,7 @@ end
         photon::Propagated{Photon},
         positron::Propagated{Positron},
     )
-    T = real(eltype(photon.value))
+    T = real(eltype(positron.value))
     return Unpropagated(Positron(), positron.value * (VERTEX(T) * photon.value)) # photon - positron -> positron
 end
 @inline function compute( # electron, positron
