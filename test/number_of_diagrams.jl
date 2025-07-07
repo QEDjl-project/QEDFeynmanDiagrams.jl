@@ -22,3 +22,9 @@ end
 
     @test factorial(n + 4, 3) * 2 == number_of_diagrams(proc)
 end
+
+@testset "Invalid Processes" begin
+    @test number_of_diagrams(MockProcess((Electron(), Electron()), (Positron(), Electron()))) == 0
+    @test number_of_diagrams(MockProcess((Photon(), Photon()), (Photon(), Photon()))) == 0 # diagrams exist, but only with loops
+    @test number_of_diagrams(MockProcess((Photon(), Photon()), (Photon(), Positron()))) == 0
+end
