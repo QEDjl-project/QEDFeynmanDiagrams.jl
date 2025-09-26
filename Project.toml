@@ -15,8 +15,8 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 
 [compat]
 Combinatorics = "1"
-ComputableDAGs = "0.2.1"
-DataStructures = "0.18"
+ComputableDAGs = "0.2"
+DataStructures = "0.18,0.19"
 LRUCache = "1"
 Logging = "1.10"
 Memoization = "0.2"
