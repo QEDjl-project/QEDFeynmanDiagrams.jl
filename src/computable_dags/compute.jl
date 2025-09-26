@@ -55,7 +55,7 @@ struct BaseStateInput{PS_T <: AbstractParticleStateful, SPIN_POL_T <: AbstractSp
     end
 end
 
-function compute(
+@noinline function compute(
         ::ComputeTask_BaseState, input::BaseStateInput{PS_T, SPIN_POL_T}
     ) where {PS_T <: AbstractParticleStateful, SPIN_POL_T <: AbstractSpinOrPolarization}
     species = particle_species(input.particle)
@@ -98,21 +98,21 @@ end
     end
 end
 
-function _vp_momentum(
+@inline function _vp_momentum(
         vp::VirtualParticle{PROC, I, O}, psp::AbstractPhaseSpacePoint, ::Positron
     ) where {PROC, I, O}
     return -_masked_sum(momenta(psp, Incoming()), _in_contributions(vp)) +
         _masked_sum(momenta(psp, Outgoing()), _out_contributions(vp))
 end
 
-function _vp_momentum(
+@inline function _vp_momentum(
         vp::VirtualParticle{PROC, I, O}, psp::AbstractPhaseSpacePoint, ::AbstractParticleType
     ) where {PROC, I, O}
     return _masked_sum(momenta(psp, Incoming()), _in_contributions(vp)) -
         _masked_sum(momenta(psp, Outgoing()), _out_contributions(vp))
 end
 
-function compute(
+@noinline function compute(
         ::ComputeTask_Propagator, input::PropagatorInput{VP_T, PSP_T}
     ) where {VP_T, PSP_T}
     vp_species = particle_species(input.vp)
@@ -141,7 +141,7 @@ struct Propagated{PARTICLE_T <: AbstractParticleType, VALUE_T}
     value::VALUE_T
 end
 
-@inline function compute( # photon, electron
+@noinline function compute( # photon, electron
         ::ComputeTask_Pair,
         photon::Propagated{Photon},
         electron::Propagated{Electron},
@@ -149,7 +149,7 @@ end
     T = real(eltype(electron.value))
     return Unpropagated(Electron(), (photon.value * VERTEX(T)) * electron.value) # photon - electron -> electron
 end
-@inline function compute( # photon, positron
+@noinline function compute( # photon, positron
         ::ComputeTask_Pair,
         photon::Propagated{Photon},
         positron::Propagated{Positron},
@@ -157,7 +157,7 @@ end
     T = real(eltype(positron.value))
     return Unpropagated(Positron(), positron.value * (VERTEX(T) * photon.value)) # photon - positron -> positron
 end
-@inline function compute( # electron, positron
+@noinline function compute( # electron, positron
         ::ComputeTask_Pair,
         electron::Propagated{Electron},
         positron::Propagated{Positron},
@@ -166,28 +166,28 @@ end
     return Unpropagated(Photon(), positron.value * VERTEX(T) * electron.value)  # electron - positron -> photon
 end
 
-@inline function compute(
+@noinline function compute(
         ::ComputeTask_PairNegated, v1::Propagated{P1}, v2::Propagated{P2}
     ) where {P1, P2}
     T = real(eltype(v1.value))
     return -one(T) * compute(ComputeTask_Pair(), v1, v2)
 end
 
-@inline function compute(::ComputeTask_PropagatePairs, prop, photon::Unpropagated{Photon})
+@noinline function compute(::ComputeTask_PropagatePairs, prop, photon::Unpropagated{Photon})
     return Propagated(Photon(), photon.value * prop)
 end
-@inline function compute(
+@noinline function compute(
         ::ComputeTask_PropagatePairs, prop, electron::Unpropagated{Electron}
     )
     return Propagated(Electron(), prop * electron.value)
 end
-@inline function compute(
+@noinline function compute(
         ::ComputeTask_PropagatePairs, prop, positron::Unpropagated{Positron}
     )
     return Propagated(Positron(), positron.value * prop)
 end
 
-@inline function compute(
+@noinline function compute(
         ::ComputeTask_Triple,
         photon::Propagated{Photon},
         electron::Propagated{Electron},
@@ -196,7 +196,7 @@ end
     T = real(eltype(photon.value))
     return positron.value * (VERTEX(T) * photon.value) * electron.value
 end
-@inline function compute(
+@noinline function compute(
         ::ComputeTask_TripleNegated,
         photon::Propagated{Photon},
         electron::Propagated{Electron},
@@ -208,13 +208,13 @@ end
 
 # this compiles in a reasonable amount of time for up to about 1e4 parameters
 # TODO: use a summation algorithm with more accuracy and/or parallelization
-function compute(::ComputeTask_CollectPairs, args::Vararg{T, N}) where {T, N}
+@noinline function compute(::ComputeTask_CollectPairs, args::Vararg{T, N}) where {T, N}
     return sum(args)
 end
-function compute(::ComputeTask_CollectTriples, args::Vararg{T, N}) where {T, N}
+@noinline function compute(::ComputeTask_CollectTriples, args::Vararg{T, N}) where {T, N}
     return sum(args)
 end
-function compute(::ComputeTask_SpinPolCumulation, args::Vararg{T, N}) where {T, N}
+@noinline function compute(::ComputeTask_SpinPolCumulation, args::Vararg{T, N}) where {T, N}
     sum = zero(real(eltype(T)))
     for arg in args
         sum += abs2(arg)

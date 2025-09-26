@@ -85,7 +85,7 @@ function ComputableDAGs.input_expr(
         sp_str = _construction_string(spin_pol)
 
         return Meta.parse(
-            "QEDFeynmanDiagrams.BaseStateInput(
+            "@noinline QEDFeynmanDiagrams.BaseStateInput(
                 ParticleStateful($dir_str, $species_str, momentum($psp_symbol, $dir_str, $species_str, Val($index))),
                 $sp_str,
             )",
@@ -95,7 +95,7 @@ function ComputableDAGs.input_expr(
         index = parse(Int, name[4:end]) # get index of the virtual particle in the process
 
         vp = virtual_particles(proc)[index]
-        return Meta.parse("QEDFeynmanDiagrams.PropagatorInput(
+        return Meta.parse("@noinline QEDFeynmanDiagrams.PropagatorInput(
                               QEDFeynmanDiagrams.VirtualParticle(
                                 process($psp_symbol),
                                 $(_construction_string(particle_species(vp))),
