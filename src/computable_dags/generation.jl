@@ -420,7 +420,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC <: AbstractProcessDefiniti
 
         for (index, nodes_to_sum) in pair_output_nodes_by_spin_pol
             compute_pairs_sum = insert_node!(
-                g, ComputeTask_CollectPairs(length(nodes_to_sum))
+                g, ComputeTask_CollectPairs()
             )
 
             data_pairs_sum = insert_node!(g, DataTask(0))
@@ -483,7 +483,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC <: AbstractProcessDefiniti
     collected_triples = Vector{DataTaskNode}()
     for (index, results) in triples_results
         compute_collect_triples = insert_node!(
-            g, ComputeTask_CollectTriples(length(results))
+            g, ComputeTask_CollectTriples()
         )
         data_collect_triples = insert_node!(g, DataTask(0))
 
@@ -497,7 +497,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC <: AbstractProcessDefiniti
 
     # Finally, abs2 sum over spin/pol configurations
     compute_total_result = insert_node!(
-        g, ComputeTask_SpinPolCumulation(length(collected_triples))
+        g, ComputeTask_SpinPolCumulation()
     )
     for finished_triple in collected_triples
         insert_edge!(g, finished_triple, compute_total_result)
