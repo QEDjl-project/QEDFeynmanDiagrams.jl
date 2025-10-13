@@ -26,7 +26,9 @@ function number_of_diagrams(proc::AbstractProcessDefinition)
         number_particles(proc, Incoming(), Positron()) +
         number_particles(proc, Outgoing(), Electron())
 
-    @assert E == anti_E "no valid Feynman diagrams exist for the given process\n$proc"
+    if E != anti_E || (E == anti_E == 0)
+        return 0
+    end
 
     # TODO: add muons/tauons
     U = 0

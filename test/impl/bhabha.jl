@@ -32,11 +32,13 @@ function _ground_truth_bhabha(psp::PhaseSpacePoint)
     p_i = psp[Incoming(), 2]
     p_o = psp[Outgoing(), 2]
 
+    T = momentum_eltype(psp)
+
     # propagators
     prop_ei_pi = propagator(Photon(), momentum(e_i) + momentum(p_i))
     prop_ei_eo = propagator(Photon(), momentum(e_i) - momentum(e_o))
 
-    sum = 0.0
+    sum = zero(T)
 
     for ((e_i_s, p_i_s), (e_o_s, p_o_s)) in spin_pols_iter(process(psp))
         # base states
@@ -54,8 +56,8 @@ function _ground_truth_bhabha(psp::PhaseSpacePoint)
         )
 
         # diagram 1: e_i with p_i - photon - e_o with p_o
-        diagram1 = (p_i_b * VERTEX * e_i_b) * prop_ei_pi * (e_o_b * VERTEX * p_o_b)
-        diagram2 = (e_o_b * VERTEX * e_i_b) * prop_ei_eo * (p_i_b * VERTEX * p_o_b)
+        diagram1 = (p_i_b * VERTEX(T) * e_i_b) * prop_ei_pi * (e_o_b * VERTEX(T) * p_o_b)
+        diagram2 = (e_o_b * VERTEX(T) * e_i_b) * prop_ei_eo * (p_i_b * VERTEX(T) * p_o_b)
         sum += abs2(diagram1 - diagram2)
     end
 
