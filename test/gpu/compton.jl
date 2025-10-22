@@ -23,7 +23,7 @@ N = 128
 
     # suppress type inference warnings; they don't matter here
     f = with_logger(ConsoleLogger(Logging.Error)) do
-        get_compute_function(GRAPH, PROC, cpu_st(), @__MODULE__)
+        compute_function(GRAPH, PROC, cpu_st(), @__MODULE__)
     end
 
     @testset "2-photon Compton on GPU ($MOM_EL_TYPE)" for MOM_EL_TYPE in

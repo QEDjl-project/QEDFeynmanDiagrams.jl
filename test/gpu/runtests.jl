@@ -116,9 +116,6 @@ if isempty(GPUS)
     return nothing
 end
 
-using RuntimeGeneratedFunctions
-RuntimeGeneratedFunctions.init(@__MODULE__)
-
 include("../impl/compton.jl")
 include("../impl/bhabha.jl")
 

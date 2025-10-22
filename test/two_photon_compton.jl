@@ -8,9 +8,6 @@ using QEDFeynmanDiagrams
 
 using Logging
 
-using RuntimeGeneratedFunctions
-RuntimeGeneratedFunctions.init(@__MODULE__)
-
 include("utils.jl")
 
 RNG = MersenneTwister(0)
@@ -25,7 +22,7 @@ include("impl/compton.jl")
 
     # suppress type inference warnings; they don't matter here
     f = with_logger(ConsoleLogger(Logging.Error)) do
-        get_compute_function(g, PROC, cpu_st(), @__MODULE__)
+        compute_function(g, PROC, cpu_st(), @__MODULE__)
     end
     for i in 1:10
         input = gen_process_input(RNG, PROC)

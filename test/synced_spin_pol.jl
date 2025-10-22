@@ -7,9 +7,6 @@ using ComputableDAGs
 using QEDFeynmanDiagrams
 using Logging
 
-using RuntimeGeneratedFunctions
-RuntimeGeneratedFunctions.init(@__MODULE__)
-
 include("utils.jl")
 
 RNG = MersenneTwister(0)
@@ -72,13 +69,13 @@ end
 
     # suppress type inference warnings; they don't matter here
     f_synced = with_logger(ConsoleLogger(Logging.Error)) do
-        get_compute_function(g_synced, proc_synced, cpu_st(), @__MODULE__)
+        compute_function(g_synced, proc_synced, cpu_st(), @__MODULE__)
     end
     f_polx = with_logger(ConsoleLogger(Logging.Error)) do
-        get_compute_function(g_polx, proc_polx, cpu_st(), @__MODULE__)
+        compute_function(g_polx, proc_polx, cpu_st(), @__MODULE__)
     end
     f_poly = with_logger(ConsoleLogger(Logging.Error)) do
-        get_compute_function(g_poly, proc_poly, cpu_st(), @__MODULE__)
+        compute_function(g_poly, proc_poly, cpu_st(), @__MODULE__)
     end
 
     results_synced = f_synced.(inputs_synced)
@@ -131,10 +128,10 @@ end
 
     # suppress type inference warnings; they don't matter here
     f_synced = with_logger(ConsoleLogger(Logging.Error)) do
-        get_compute_function(g_synced, proc_synced, cpu_st(), @__MODULE__)
+        compute_function(g_synced, proc_synced, cpu_st(), @__MODULE__)
     end
     functions = with_logger(ConsoleLogger(Logging.Error)) do
-        get_compute_function.(graphs, procs, Ref(cpu_st()), Ref(@__MODULE__))
+        compute_function.(graphs, procs, Ref(cpu_st()), Ref(@__MODULE__))
     end
 
     # have to cast these for their respective processes
