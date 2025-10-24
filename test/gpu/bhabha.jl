@@ -13,17 +13,18 @@ MODEL = MockModel()
 INPSL = FlatPhaseSpaceLayout(TwoBodyRestSystem())
 N = 128
 
+# suppress type inference warnings; they don't matter here
+f = with_logger(ConsoleLogger(Logging.Error)) do
+    compute_function(GRAPH, PROC, cpu_st(), @__MODULE__)
+end
+k = eval(kernel(GRAPH, PROC, @__MODULE__))
+
 @testset "Testing with $GPU_MODULE" for (GPU_MODULE, VECTOR_TYPE) in GPUS
     CDAG_GPU_T = GPU_TYPES_CDAG[GPU_MODULE]
 
     if isnothing(CDAG_GPU_T)
         @warn "$GPU_MODULE is not yet supported by ComputableDAGs.jl. Skipping GPU tests..."
         continue
-    end
-
-    # suppress type inference warnings; they don't matter here
-    f = with_logger(ConsoleLogger(Logging.Error)) do
-        get_compute_function(GRAPH, PROC, cpu_st(), @__MODULE__)
     end
 
     @testset "Bhabha scattering on GPU ($MOM_EL_TYPE)" for MOM_EL_TYPE in
@@ -35,10 +36,8 @@ N = 128
 
         expected_result = _ground_truth_bhabha.(input)
 
-        func = eval(kernel(CDAG_GPU_T, GRAPH, PROC, @__MODULE__))
-
         @testset "generated kernel" begin
-            call_kernel(CDAG_GPU_T, func, gpu_input, gpu_output)
+            k(get_backend(gpu_input), 32)(gpu_input, gpu_output; ndrange = N)
 
             @test eltype(gpu_output) == MOM_EL_TYPE
             @test isapprox(Vector(gpu_output), expected_result)
