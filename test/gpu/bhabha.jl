@@ -13,12 +13,6 @@ MODEL = MockModel()
 INPSL = FlatPhaseSpaceLayout(TwoBodyRestSystem())
 N = 128
 
-# suppress type inference warnings; they don't matter here
-f = with_logger(ConsoleLogger(Logging.Error)) do
-    compute_function(GRAPH, PROC, cpu_st(), @__MODULE__)
-end
-k = eval(kernel(GRAPH, PROC, @__MODULE__))
-
 @testset "Testing with $GPU_MODULE" for (GPU_MODULE, VECTOR_TYPE) in GPUS
     CDAG_GPU_T = GPU_TYPES_CDAG[GPU_MODULE]
 
@@ -37,6 +31,10 @@ k = eval(kernel(GRAPH, PROC, @__MODULE__))
         expected_result = _ground_truth_bhabha.(input)
 
         @testset "generated kernel" begin
+            k = with_logger(ConsoleLogger(Logging.Error)) do
+                kernel(GRAPH, PROC, @__MODULE__; concrete_input_type = eltype(gpu_input))
+            end
+
             k(get_backend(gpu_input), 32)(gpu_input, gpu_output; ndrange = N)
 
             @test eltype(gpu_output) == MOM_EL_TYPE
