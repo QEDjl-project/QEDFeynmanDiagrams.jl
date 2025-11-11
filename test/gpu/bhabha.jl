@@ -32,7 +32,7 @@ N = 128
 
         @testset "generated kernel" begin
             k = with_logger(ConsoleLogger(Logging.Error)) do
-                kernel(GRAPH, PROC, @__MODULE__; concrete_input_type = eltype(gpu_input))
+                kernel(GRAPH, PROC, @__MODULE__)
             end
 
             k(get_backend(gpu_input), 32)(gpu_input, gpu_output; ndrange = N)
