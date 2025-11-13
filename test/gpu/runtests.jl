@@ -7,6 +7,7 @@ functional, and execute the unit tests then. Additionally, if an environment var
 using ComputableDAGs
 ComputableDAGs.init(@__MODULE__)
 using KernelAbstractions
+ComputableDAGs.init_kernel(@__MODULE__)
 
 include("../utils.jl")
 
@@ -111,11 +112,10 @@ end
 if isempty(GPUS)
     @info """No GPU tests are enabled, skipping tests...
     To test GPU functionality, please use 'TEST_<GPU> = 1 julia ...' for one of GPU=[CUDA, AMDGPU, METAL, ONEAPI]"""
-    return nothing
+else
+    include("../impl/compton.jl")
+    include("../impl/bhabha.jl")
+
+    include("compton.jl")
+    include("bhabha.jl")
 end
-
-include("../impl/compton.jl")
-include("../impl/bhabha.jl")
-
-include("compton.jl")
-include("bhabha.jl")
