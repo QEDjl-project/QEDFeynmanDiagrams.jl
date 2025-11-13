@@ -1,7 +1,7 @@
 # Manual
 
 ## Usage
-    
+
 !!! note
     This project uses [ComputableDAGs.jl](https://github.com/ComputableDAGs/ComputableDAGs.jl), which requires an initialization step, so when using this project, make sure to have
     ```julia
