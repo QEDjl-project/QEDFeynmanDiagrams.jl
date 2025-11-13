@@ -50,9 +50,7 @@ psp = PhaseSpacePoint(
 )
 
 # With the DAG, the process, and an input type to use, we can now generate the actual computable function:
-func = compute_function(
-    dag, proc, cpu_st(), @__MODULE__; concrete_input_type = typeof(psp)
-);
+func = compute_function(dag, proc, cpu_st(), @__MODULE__);
 
 # Finally, we can test that the function actually runs and computes something by
 # simply calling it on the `PhaseSpacePoint`:
