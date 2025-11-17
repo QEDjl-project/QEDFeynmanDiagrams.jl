@@ -160,3 +160,14 @@ end
     end
     return sum
 end
+
+# for differential probability and cross-sections overloads
+@compute_task ComputeTask_UnsafeDiffProb 0 ((mat_el_sqsum::T, psp) where {T}) -> begin
+    normalization = QEDbase._averaging_norm(T, psp.proc)
+    ps_fac = QEDbase._phase_space_factor(psp)
+    return normalization * mat_el_sqsum * ps_fac
+end
+
+@compute_task ComputeTask_UnsafeDiffCS 0 ((diff_prob::T, psp) where {T}) -> begin
+    return 1 / (4 * QEDbase._incident_flux(psp)) * diff_prob
+end
