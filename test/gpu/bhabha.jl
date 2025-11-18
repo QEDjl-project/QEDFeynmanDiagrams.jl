@@ -35,7 +35,7 @@ N = 128
                 kernel(GRAPH, PROC, @__MODULE__)
             end
 
-            k(get_backend(gpu_input), 32)(gpu_input, gpu_output; ndrange = N)
+            k(get_backend(gpu_input), 32)(gpu_output, gpu_input; ndrange = N)
 
             @test eltype(gpu_output) == MOM_EL_TYPE
             @test isapprox(Vector(gpu_output), expected_result)
