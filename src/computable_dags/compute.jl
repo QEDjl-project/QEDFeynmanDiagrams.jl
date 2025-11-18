@@ -150,25 +150,21 @@ end
 
 # this compiles in a reasonable amount of time for up to about 1e4 parameters
 # TODO: use a summation algorithm with more accuracy and/or parallelization
-@compute_task ComputeTask_CollectPairs 0 (
-    @inline function _sum_pairs(args::Vararg)
-        @inline sum(args)
+@compute_task ComputeTask_CollectPairs 0 function _sum_pairs(args::Vararg)
+    sum(args)
+end
+
+@compute_task ComputeTask_CollectTriples 0 function _sum_triples(args::Vararg)
+    sum(args)
+end
+
+@compute_task ComputeTask_SpinPolCumulation 0 function _sum_spin_pol(args::Vararg{T, N}) where {T, N}
+    sum = zero(real(eltype(T)))
+    for arg in args
+        sum += abs2(arg)
     end
-)
-@compute_task ComputeTask_CollectTriples 0 (
-    @inline function _sum_triples(args::Vararg)
-        @inline sum(args)
-    end
-)
-@compute_task ComputeTask_SpinPolCumulation 0 (
-    @inline function _sum_spin_pol(args::Vararg{T, N}) where {T, N}
-        sum = zero(real(eltype(T)))
-        for arg in args
-            sum += abs2(arg)
-        end
-        return sum
-    end
-)
+    return sum
+end
 
 # for differential probability and cross-sections overloads
 @compute_task ComputeTask_UnsafeDiffProb 0 function _diff_prob(mat_el_sqsum::T, psp) where {T}
