@@ -1,9 +1,6 @@
 using QEDbase.Mocks
 using QEDFeynmanDiagrams
 
-using RuntimeGeneratedFunctions
-RuntimeGeneratedFunctions.init(@__MODULE__)
-
 include("utils.jl")
 
 RNG = MersenneTwister(0)

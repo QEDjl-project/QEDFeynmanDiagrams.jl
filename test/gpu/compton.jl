@@ -21,11 +21,6 @@ N = 128
         continue
     end
 
-    # suppress type inference warnings; they don't matter here
-    f = with_logger(ConsoleLogger(Logging.Error)) do
-        get_compute_function(GRAPH, PROC, cpu_st(), @__MODULE__)
-    end
-
     @testset "2-photon Compton on GPU ($MOM_EL_TYPE)" for MOM_EL_TYPE in
         GPU_FLOAT_TYPES[GPU_MODULE]
         input = [gen_process_input(RNG, PROC) for _ in 1:N]
@@ -35,10 +30,12 @@ N = 128
 
         expected_result = two_compton_mat_el.(input)
 
-        func = eval(kernel(CDAG_GPU_T, GRAPH, PROC, @__MODULE__))
-
         @testset "generated kernel" begin
-            call_kernel(CDAG_GPU_T, func, gpu_input, gpu_output)
+            k = with_logger(ConsoleLogger(Logging.Error)) do
+                kernel(GRAPH, PROC, @__MODULE__)
+            end
+
+            k(get_backend(gpu_input), 32)(gpu_output, gpu_input; ndrange = N)
 
             @test eltype(gpu_output) == MOM_EL_TYPE
             @test isapprox(Vector(gpu_output), expected_result)

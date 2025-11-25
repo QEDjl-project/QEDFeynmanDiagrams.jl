@@ -4,8 +4,7 @@ using QEDFeynmanDiagrams
 using Random
 using Logging
 
-using RuntimeGeneratedFunctions
-RuntimeGeneratedFunctions.init(@__MODULE__)
+ComputableDAGs.init(@__MODULE__)
 
 RNG = MersenneTwister(137)
 MODEL = MockModel()
@@ -39,7 +38,7 @@ end
 
     # suppress type inference warnings; they don't matter here
     f = with_logger(ConsoleLogger(Logging.Error)) do
-        get_compute_function(GRAPH, PROC, cpu_st(), @__MODULE__)
+        compute_function(GRAPH, PROC, cpu_st(), @__MODULE__)
     end
     results = f.(psps)
 

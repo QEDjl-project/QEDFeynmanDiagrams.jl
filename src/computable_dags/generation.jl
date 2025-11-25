@@ -104,6 +104,8 @@ function ComputableDAGs.input_expr(
                               ),
                               $psp_symbol
                           )")
+    elseif startswith(name, "psp")
+        return Meta.parse("identity($psp_symbol)")
     else
         throw(InvalidInputError("failed to parse node name \"$name\""))
     end
@@ -296,8 +298,18 @@ end
     graph(proc::AbstractProcessDefinition)
 
 Generate and return a [`ComputableDAGs.DAG`](@extref), representing the computation for the squared matrix element of this scattering process, summed over spin and polarization combinations allowed by the process.
+
+## kwargs
+- `target::Symbol`: Use one of the following:
+    - `:mat_el_sqsum` to generate a graph calculating the square sum of the matrix elements
+    - `:diff_cs` to generate a graph calculating the differential cross section
+    - `:diff_prob` to generate a graph calculating the differential probability
 """
-function ComputableDAGs.graph(proc::PROC) where {PROC <: AbstractProcessDefinition}
+function ComputableDAGs.graph(proc::PROC; target::Symbol = :mat_el_sqsum) where {PROC <: AbstractProcessDefinition}
+    if target != :mat_el_sqsum && target != :diff_cs && target != :diff_prob
+        throw("unknown value for keyword argument \"target\" = $target\nallowed are: :mat_el_sqsum, :diff_cs, :diff_prob")
+    end
+
     I = number_incoming_particles(proc)
     O = number_outgoing_particles(proc)
     SPECIFIC_VP = VirtualParticle{PROC, NTuple{I, Bool}, NTuple{O, Bool}}
@@ -420,7 +432,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC <: AbstractProcessDefiniti
 
         for (index, nodes_to_sum) in pair_output_nodes_by_spin_pol
             compute_pairs_sum = insert_node!(
-                g, ComputeTask_CollectPairs(length(nodes_to_sum))
+                g, ComputeTask_CollectPairs()
             )
 
             data_pairs_sum = insert_node!(g, DataTask(0))
@@ -483,7 +495,7 @@ function ComputableDAGs.graph(proc::PROC) where {PROC <: AbstractProcessDefiniti
     collected_triples = Vector{DataTaskNode}()
     for (index, results) in triples_results
         compute_collect_triples = insert_node!(
-            g, ComputeTask_CollectTriples(length(results))
+            g, ComputeTask_CollectTriples()
         )
         data_collect_triples = insert_node!(g, DataTask(0))
 
@@ -497,13 +509,42 @@ function ComputableDAGs.graph(proc::PROC) where {PROC <: AbstractProcessDefiniti
 
     # Finally, abs2 sum over spin/pol configurations
     compute_total_result = insert_node!(
-        g, ComputeTask_SpinPolCumulation(length(collected_triples))
+        g, ComputeTask_SpinPolCumulation()
     )
     for finished_triple in collected_triples
         insert_edge!(g, finished_triple, compute_total_result)
     end
 
-    final_data_out = insert_node!(g, DataTask(0))
-    insert_edge!(g, compute_total_result, final_data_out)
+    mat_el_sqsum_node = insert_node!(g, DataTask(0))
+    insert_edge!(g, compute_total_result, mat_el_sqsum_node)
+
+    # if we're doing mat_el_sqsum we're done, otherwise add nodes for diff_prob
+    if target == :mat_el_sqsum
+        return g
+    end
+
+    psp_in = insert_node!(g, DataTask(0), "psp")
+
+    comp_unsafe_diff_prob = insert_node!(g, ComputeTask_UnsafeDiffProb())
+    insert_edge!(g, mat_el_sqsum_node, comp_unsafe_diff_prob, 1)
+    insert_edge!(g, psp_in, comp_unsafe_diff_prob, 2)
+
+    unsafe_diff_prob = insert_node!(g, DataTask(0))
+    insert_edge!(g, comp_unsafe_diff_prob, unsafe_diff_prob)
+
+    # if we're doing differential probability, we're done, otherwise add nodes for differential cross section
+    if target == :diff_prob
+        return g
+    end
+
+    comp_unsafe_diff_cs = insert_node!(g, ComputeTask_UnsafeDiffCS())
+    insert_edge!(g, unsafe_diff_prob, comp_unsafe_diff_cs, 1)
+    insert_edge!(g, psp_in, comp_unsafe_diff_cs, 2)
+
+    unsafe_diff_cs = insert_node!(g, DataTask(0))
+    insert_edge!(g, comp_unsafe_diff_cs, unsafe_diff_cs)
+
+    # done done
+
     return g
 end

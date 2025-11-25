@@ -5,6 +5,9 @@ functional, and execute the unit tests then. Additionally, if an environment var
 """
 
 using ComputableDAGs
+ComputableDAGs.init(@__MODULE__)
+using KernelAbstractions
+ComputableDAGs.init_kernel(@__MODULE__)
 
 include("../utils.jl")
 
@@ -27,8 +30,6 @@ if amdgpu_tests
         GPU_FLOAT_TYPES[AMDGPU] = [Float32, Float64]
         GPU_TYPES_CDAG[AMDGPU] = ROCmGPU
 
-        include("utils/amdgpu.jl")
-
         @info "Testing with AMDGPU.jl"
     catch e
         @error "failed to run GPU tests, make sure the required libraries are installed\n$(e)"
@@ -50,8 +51,6 @@ if cuda_tests
         push!(GPUS, (CUDA, CuVector))
         GPU_FLOAT_TYPES[CUDA] = [Float32, Float64]
         GPU_TYPES_CDAG[CUDA] = CUDAGPU
-
-        include("utils/cuda.jl")
 
         @info "Testing with CUDA.jl"
     catch e
@@ -113,14 +112,10 @@ end
 if isempty(GPUS)
     @info """No GPU tests are enabled, skipping tests...
     To test GPU functionality, please use 'TEST_<GPU> = 1 julia ...' for one of GPU=[CUDA, AMDGPU, METAL, ONEAPI]"""
-    return nothing
+else
+    include("../impl/compton.jl")
+    include("../impl/bhabha.jl")
+
+    include("compton.jl")
+    include("bhabha.jl")
 end
-
-using RuntimeGeneratedFunctions
-RuntimeGeneratedFunctions.init(@__MODULE__)
-
-include("../impl/compton.jl")
-include("../impl/bhabha.jl")
-
-include("compton.jl")
-include("bhabha.jl")

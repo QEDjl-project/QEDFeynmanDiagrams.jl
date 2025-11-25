@@ -35,12 +35,8 @@ number_of_diagrams(proc)
 # squared matrix element. This uses `ComputableDAGs.jl`.
 dag = graph(proc)
 
-# To continue, we will need [`ComputableDAGs.jl`](https://github.com/ComputableDAGs/ComputableDAGs.jl). Since `ComputableDAGs.jl` uses
-# `RuntimeGeneratedFunction`s as the return type of [`ComputableDAGs.get_compute_function`](@extref), we need
-# to initialize it in our current module.
+# To continue, we will need [`ComputableDAGs.jl`](https://github.com/ComputableDAGs/ComputableDAGs.jl).
 using ComputableDAGs
-using RuntimeGeneratedFunctions
-RuntimeGeneratedFunctions.init(@__MODULE__)
 
 # Now we need an input for the function, which is a [`QEDcore.PhaseSpacePoint`](@extref).
 # For now, we generate random momenta for every particle. In the future, QEDevents
@@ -53,11 +49,8 @@ psp = PhaseSpacePoint(
     tuple((rand(SFourMomentum) for _ in 1:number_outgoing_particles(proc))...),
 )
 
-# With the DAG, the process, `RuntimeGeneratedFunctions` initialized, and an input type to use
-# we can now generate the actual computable function:
-func = get_compute_function(
-    dag, proc, cpu_st(), @__MODULE__; concrete_input_type = typeof(psp)
-);
+# With the DAG, the process, and an input type to use, we can now generate the actual computable function:
+func = compute_function(dag, proc, cpu_st(), @__MODULE__);
 
 # Finally, we can test that the function actually runs and computes something by
 # simply calling it on the `PhaseSpacePoint`:

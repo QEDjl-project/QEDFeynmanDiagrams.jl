@@ -1,50 +1,8 @@
-struct ComputeTask_BaseState <: AbstractComputeTask end             # calculate the base state of an external particle
-struct ComputeTask_Propagator <: AbstractComputeTask end            # calculate the propagator term of a virtual particle
-struct ComputeTask_Pair <: AbstractComputeTask end                  # from a pair of virtual particle currents, calculate the product
-struct ComputeTask_PairNegated <: AbstractComputeTask end           # same as Pair, but multiplies the result by -1
-struct ComputeTask_CollectPairs <: AbstractComputeTask              # for a list of virtual particle current pair products, sum
-    children::Int
-end
-struct ComputeTask_PropagatePairs <: AbstractComputeTask end        # for the result of a CollectPairs compute task and a propagator, propagate the sum
-struct ComputeTask_Triple <: AbstractComputeTask end                # from a triple of virtual particle currents, calculate the diagram result
-struct ComputeTask_TripleNegated <: AbstractComputeTask end           # same as Triple, but multiplies the result by -1
-struct ComputeTask_CollectTriples <: AbstractComputeTask            # sum over triples results and
-    children::Int
-end
-struct ComputeTask_SpinPolCumulation <: AbstractComputeTask         # abs2 sum over all spin/pol configs
-    children::Int
-end
-
-# import so we don't have to repeat it all the time
-import ComputableDAGs: compute, compute_effort, children
-
 Base.@irrational e (sqrt(4π / big(137.035999177)))
 
 function VERTEX(::Type{F}) where {F <: AbstractFloat}
     return (-(one(complex(F))) * e * gamma(complex(F)))
 end
-
-compute_effort(::ComputeTask_BaseState) = 0
-compute_effort(::ComputeTask_Propagator) = 0
-compute_effort(::ComputeTask_Pair) = 0
-compute_effort(::ComputeTask_PairNegated) = 0
-compute_effort(::ComputeTask_CollectPairs) = 0
-compute_effort(::ComputeTask_PropagatePairs) = 0
-compute_effort(::ComputeTask_Triple) = 0
-compute_effort(::ComputeTask_TripleNegated) = 0
-compute_effort(::ComputeTask_CollectTriples) = 0
-compute_effort(::ComputeTask_SpinPolCumulation) = 0
-
-children(::ComputeTask_BaseState) = 1
-children(::ComputeTask_Propagator) = 1
-children(::ComputeTask_Pair) = 2
-children(::ComputeTask_PairNegated) = 2
-children(t::ComputeTask_CollectPairs) = t.children
-children(::ComputeTask_PropagatePairs) = 2
-children(::ComputeTask_Triple) = 3
-children(::ComputeTask_TripleNegated) = 3
-children(t::ComputeTask_CollectTriples) = t.children
-children(t::ComputeTask_SpinPolCumulation) = t.children
 
 struct BaseStateInput{PS_T <: AbstractParticleStateful, SPIN_POL_T <: AbstractSpinOrPolarization}
     particle::PS_T
@@ -53,26 +11,6 @@ struct BaseStateInput{PS_T <: AbstractParticleStateful, SPIN_POL_T <: AbstractSp
     function BaseStateInput(ps::PS_T, spinpol::SPIN_POL_T) where {PS_T, SPIN_POL_T}
         return new{PS_T, SPIN_POL_T}(ps, spinpol)
     end
-end
-
-function compute(
-        ::ComputeTask_BaseState, input::BaseStateInput{PS_T, SPIN_POL_T}
-    ) where {PS_T <: AbstractParticleStateful, SPIN_POL_T <: AbstractSpinOrPolarization}
-    species = particle_species(input.particle)
-    if is_outgoing(input.particle)
-        species = _invert(species)
-    end
-    state = QEDbase.base_state(
-        particle_species(input.particle),
-        particle_direction(input.particle),
-        momentum(input.particle),
-        input.spin_pol,
-    )
-    return Propagated( # "propagated" because it goes directly into the next pair
-        species,
-        state,
-        # bispinor, adjointbispinor, or lorentzvector
-    )
 end
 
 struct PropagatorInput{VP_T <: VirtualParticle, PSP_T <: AbstractPhaseSpacePoint}
@@ -112,15 +50,6 @@ function _vp_momentum(
         _masked_sum(momenta(psp, Outgoing()), _out_contributions(vp))
 end
 
-function compute(
-        ::ComputeTask_Propagator, input::PropagatorInput{VP_T, PSP_T}
-    ) where {VP_T, PSP_T}
-    vp_species = particle_species(input.vp)
-    vp_mom = _vp_momentum(input.vp, input.psp, vp_species)
-    inner = QEDbase.propagator(vp_species, vp_mom)
-    return inner
-end
-
 struct Unpropagated{PARTICLE_T <: AbstractParticleType, VALUE_T}
     particle::PARTICLE_T
     value::VALUE_T
@@ -141,24 +70,48 @@ struct Propagated{PARTICLE_T <: AbstractParticleType, VALUE_T}
     value::VALUE_T
 end
 
-@inline function compute( # photon, electron
-        ::ComputeTask_Pair,
+@compute_task ComputeTask_BaseState 0 function _base_state(input::BaseStateInput{PS_T, SPIN_POL_T}) where {PS_T <: AbstractParticleStateful, SPIN_POL_T <: AbstractSpinOrPolarization}
+    species = particle_species(input.particle)
+    if is_outgoing(input.particle)
+        species = _invert(species)
+    end
+    state = QEDbase.base_state(
+        particle_species(input.particle),
+        particle_direction(input.particle),
+        momentum(input.particle),
+        input.spin_pol,
+    )
+    return Propagated( # "propagated" because it goes directly into the next pair
+        species,
+        state,
+        # bispinor, adjointbispinor, or lorentzvector
+    )
+end
+
+@compute_task ComputeTask_Propagator 0 function _propagator(input::PropagatorInput{VP_T, PSP_T}) where {VP_T, PSP_T}
+    vp_species = particle_species(input.vp)
+    vp_mom = _vp_momentum(input.vp, input.psp, vp_species)
+    inner = QEDbase.propagator(vp_species, vp_mom)
+    return inner
+end
+
+@compute_task ComputeTask_Pair 0 c_pair
+
+function c_pair( # photon, electron
         photon::Propagated{Photon},
         electron::Propagated{Electron},
     )
     T = real(eltype(electron.value))
     return Unpropagated(Electron(), (photon.value * VERTEX(T)) * electron.value) # photon - electron -> electron
 end
-@inline function compute( # photon, positron
-        ::ComputeTask_Pair,
+function c_pair( # photon, positron
         photon::Propagated{Photon},
         positron::Propagated{Positron},
     )
     T = real(eltype(positron.value))
     return Unpropagated(Positron(), positron.value * (VERTEX(T) * photon.value)) # photon - positron -> positron
 end
-@inline function compute( # electron, positron
-        ::ComputeTask_Pair,
+function c_pair( # electron, positron
         electron::Propagated{Electron},
         positron::Propagated{Positron},
     )
@@ -166,29 +119,18 @@ end
     return Unpropagated(Photon(), positron.value * VERTEX(T) * electron.value)  # electron - positron -> photon
 end
 
-@inline function compute(
-        ::ComputeTask_PairNegated, v1::Propagated{P1}, v2::Propagated{P2}
-    ) where {P1, P2}
+@compute_task ComputeTask_PairNegated 0 function _pair_negated(v1::Propagated{P1}, v2::Propagated{P2}) where {P1, P2}
     T = real(eltype(v1.value))
-    return -one(T) * compute(ComputeTask_Pair(), v1, v2)
+    return -one(T) * c_pair(v1, v2)
 end
 
-@inline function compute(::ComputeTask_PropagatePairs, prop, photon::Unpropagated{Photon})
-    return Propagated(Photon(), photon.value * prop)
-end
-@inline function compute(
-        ::ComputeTask_PropagatePairs, prop, electron::Unpropagated{Electron}
-    )
-    return Propagated(Electron(), prop * electron.value)
-end
-@inline function compute(
-        ::ComputeTask_PropagatePairs, prop, positron::Unpropagated{Positron}
-    )
-    return Propagated(Positron(), positron.value * prop)
-end
+@compute_task ComputeTask_PropagatePairs 0 (
+    c_prop_pairs(prop, photon::Unpropagated{Photon}) = Propagated(Photon(), photon.value * prop);
+    c_prop_pairs(prop, electron::Unpropagated{Electron}) = Propagated(Electron(), prop * electron.value);
+    c_prop_pairs(prop, positron::Unpropagated{Positron}) = Propagated(Positron(), positron.value * prop)
+)
 
-@inline function compute(
-        ::ComputeTask_Triple,
+@compute_task ComputeTask_Triple 0 function _triple(
         photon::Propagated{Photon},
         electron::Propagated{Electron},
         positron::Propagated{Positron},
@@ -196,8 +138,8 @@ end
     T = real(eltype(photon.value))
     return positron.value * (VERTEX(T) * photon.value) * electron.value
 end
-@inline function compute(
-        ::ComputeTask_TripleNegated,
+
+@compute_task ComputeTask_TripleNegated 0 function _triple_negated(
         photon::Propagated{Photon},
         electron::Propagated{Electron},
         positron::Propagated{Positron},
@@ -208,16 +150,29 @@ end
 
 # this compiles in a reasonable amount of time for up to about 1e4 parameters
 # TODO: use a summation algorithm with more accuracy and/or parallelization
-function compute(::ComputeTask_CollectPairs, args::Vararg{T, N}) where {T, N}
-    return sum(args)
+@compute_task ComputeTask_CollectPairs 0 function _sum_pairs(args::Vararg)
+    sum(args)
 end
-function compute(::ComputeTask_CollectTriples, args::Vararg{T, N}) where {T, N}
-    return sum(args)
+
+@compute_task ComputeTask_CollectTriples 0 function _sum_triples(args::Vararg)
+    sum(args)
 end
-function compute(::ComputeTask_SpinPolCumulation, args::Vararg{T, N}) where {T, N}
+
+@compute_task ComputeTask_SpinPolCumulation 0 function _sum_spin_pol(args::Vararg{T, N}) where {T, N}
     sum = zero(real(eltype(T)))
     for arg in args
         sum += abs2(arg)
     end
     return sum
+end
+
+# for differential probability and cross-sections overloads
+@compute_task ComputeTask_UnsafeDiffProb 0 function _diff_prob(mat_el_sqsum::T, psp) where {T}
+    normalization = QEDbase._averaging_norm(T, psp.proc)
+    ps_fac = QEDbase._phase_space_factor(psp)
+    return normalization * mat_el_sqsum * ps_fac
+end
+
+@compute_task ComputeTask_UnsafeDiffCS 0 function _diff_cs(diff_prob::T, psp) where {T}
+    return 1 / (4 * QEDbase._incident_flux(psp)) * diff_prob
 end

@@ -5,6 +5,8 @@ using Reexport
 @reexport using QEDcore
 @reexport using ComputableDAGs
 
+using ComputableDAGs: DataTask
+
 using Combinatorics
 using LRUCache
 using Memoization

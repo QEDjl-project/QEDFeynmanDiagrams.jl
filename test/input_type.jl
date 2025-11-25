@@ -6,9 +6,6 @@ using QEDbase.Mocks
 using ComputableDAGs
 using QEDFeynmanDiagrams
 
-using RuntimeGeneratedFunctions
-RuntimeGeneratedFunctions.init(@__MODULE__)
-
 include("utils.jl")
 
 RNG = MersenneTwister(0)
@@ -31,9 +28,9 @@ RNG = MersenneTwister(0)
         input = gen_process_input(RNG, n_other_proc)
 
         if n_other == n
-            @test typeof(input) <: input_type(proc)
+            @test typeof(input) <: ComputableDAGs.input_type(proc)
         else
-            @test !(typeof(input) <: input_type(proc))
+            @test !(typeof(input) <: ComputableDAGs.input_type(proc))
         end
     end
 end
