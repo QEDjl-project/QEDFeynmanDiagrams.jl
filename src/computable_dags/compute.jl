@@ -158,12 +158,8 @@ end
     sum(args)
 end
 
-@compute_task ComputeTask_SpinPolCumulation 0 function _sum_spin_pol(args::Vararg{T, N}) where {T, N}
-    sum = zero(real(eltype(T)))
-    for arg in args
-        sum += abs2(arg)
-    end
-    return sum
+@compute_task ComputeTask_SpinPolCumulation 0 function _sum_spin_pol(args::Vararg)
+    sum(abs2, args)
 end
 
 # for differential probability and cross-sections overloads
